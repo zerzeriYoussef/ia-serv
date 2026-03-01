@@ -2,6 +2,8 @@ from typing import List, Optional
 from pydantic_settings import BaseSettings
 from functools import lru_cache
 
+import os
+os.environ['PGCLIENTENCODING'] = 'UTF8'  # This tells PostgreSQL to speak UTF8 to Python
 
 class Settings(BaseSettings):
     # Application
