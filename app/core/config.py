@@ -2,8 +2,6 @@ from typing import List, Optional
 from pydantic_settings import BaseSettings
 from functools import lru_cache
 
-import os
-os.environ['PGCLIENTENCODING'] = 'UTF8'  # This tells PostgreSQL to speak UTF8 to Python
 
 class Settings(BaseSettings):
     # Application
@@ -15,12 +13,12 @@ class Settings(BaseSettings):
     PORT: int = 8000
     
     # Database
-    DATABASE_URL: str
+    DATABASE_URL: str = "postgresql+asyncpg://postgres:admin@localhost:5432/ai_service"
     DATABASE_POOL_SIZE: int = 20
     DATABASE_MAX_OVERFLOW: int = 10
     
     # Redis
-    REDIS_URL: str
+    REDIS_URL: str = "redis://localhost:6379"
     REDIS_CACHE_TTL: int = 3600
     
     # File Upload
@@ -42,6 +40,8 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         case_sensitive = True
+        # Allow extra environment variables like PGCLIENTENCODING / PGSSLMODE
+        extra = "ignore"
 
 
 @lru_cache()

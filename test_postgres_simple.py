@@ -1,56 +1,57 @@
-import os
-import sys
-from urllib.parse import urlparse
+# check_my_tables.py
+from sqlalchemy import create_engine, inspect, text
+from app.core.config import settings
 
-# Print Python version and system info
-print(f"Python version: {sys.version}")
-print(f"System encoding: {sys.getdefaultencoding()}")
-print(f"Filesystem encoding: {sys.getfilesystemencoding()}")
-print(f"Platform: {sys.platform}")
+# Use sync connection
+sync_url = settings.DATABASE_URL.replace("+asyncpg", "")
+engine = create_engine(sync_url)
 
-# Your database URL from .env
-db_url = "postgresql+asyncpg://postgres:admin@localhost:5432/ai_service"
-print(f"\nDatabase URL: {db_url}")
+print("=" * 60)
+print("🔍 DATABASE TABLE CHECK")
+print("=" * 60)
 
-# Parse it
-parsed = urlparse(db_url.replace("+asyncpg", ""))
-print(f"Parsed connection:")
-print(f"  Host: {parsed.hostname}")
-print(f"  Port: {parsed.port or 5432}")
-print(f"  Database: {parsed.path[1:] if parsed.path else 'ai_service'}")
-print(f"  User: {parsed.username}")
-print(f"  Password: {'*' * len(parsed.password) if parsed.password else 'None'}")
-
-# Try to decode the password to see if it has special chars
-print(f"\nPassword bytes: {parsed.password.encode('ascii', errors='replace')}")
-
-# Try connection with different encodings
-import psycopg2
-
-encodings_to_try = ['UTF8', 'LATIN1', 'WIN1252', 'SQL_ASCII']
-
-for encoding in encodings_to_try:
-    print(f"\n--- Trying with client_encoding={encoding} ---")
-    try:
-        conn = psycopg2.connect(
-            host=parsed.hostname or 'localhost',
-            port=parsed.port or 5432,
-            database=parsed.path[1:] if parsed.path else 'ai_service',
-            user=parsed.username or 'postgres',
-            password=parsed.password or '',
-            options=f'-c client_encoding={encoding}'
-        )
-        cursor = conn.cursor()
-        cursor.execute("SELECT version();")
-        version = cursor.fetchone()
-        print(f"✅ SUCCESS with {encoding}!")
-        print(f"Version: {version[0][:50]}...")
-        cursor.close()
-        conn.close()
-        break
-    except Exception as e:
-        print(f"❌ Failed with {encoding}: {e}")
+with engine.connect() as conn:
+    # Check if datasets table exists
+    result = conn.execute(text("""
+        SELECT table_name 
+        FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'datasets'
+    """))
+    
+    exists = result.fetchone()
+    
+    if exists:
+        print("✅ 'datasets' table EXISTS!")
         
-        # Check if it's the same error
-        if "0xe9" in str(e):
-            print("   ⚠️  Same encoding error (0xe9 detected)")
+        # Show table structure
+        result = conn.execute(text("""
+            SELECT column_name, data_type, is_nullable
+            FROM information_schema.columns
+            WHERE table_name = 'datasets'
+            ORDER BY ordinal_position
+        """))
+        
+        print("\n📋 Table Structure:")
+        print("-" * 50)
+        for row in result:
+            print(f"  • {row[0]}: {row[1]} (nullable: {row[2]})")
+        
+        # Count rows
+        result = conn.execute(text("SELECT COUNT(*) FROM datasets"))
+        count = result.scalar()
+        print(f"\n📊 Row count: {count}")
+        
+    else:
+        print("❌ 'datasets' table NOT found")
+        
+        # List all tables
+        result = conn.execute(text("""
+            SELECT table_name 
+            FROM information_schema.tables 
+            WHERE table_schema = 'public'
+        """))
+        tables = [row[0] for row in result]
+        print(f"\nExisting tables: {tables}")
+
+print("\n✅ Check complete!")
