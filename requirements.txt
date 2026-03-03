@@ -13,6 +13,9 @@ aiofiles>=23.2.1
 # Data Validation
 great-expectations>=0.18.8
 
+# ML / preprocessing
+scikit-learn>=1.8.0  # provides sklearn.preprocessing scalers
+
 # Database
 # SQLAlchemy 2.0.31+ includes fixes for Python 3.13 compatibility
 sqlalchemy>=2.0.31

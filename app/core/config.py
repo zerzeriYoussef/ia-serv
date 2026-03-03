@@ -37,7 +37,7 @@ class Settings(BaseSettings):
     # Logging
     LOG_LEVEL: str = "INFO"
     
-    class Config:
+    class Config:  #i will later change setting above for better security
         env_file = ".env"
         case_sensitive = True
         # Allow extra environment variables like PGCLIENTENCODING / PGSSLMODE
