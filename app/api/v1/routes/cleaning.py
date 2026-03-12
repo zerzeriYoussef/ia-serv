@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 import pandas as pd
+import numpy as np
 import logging
 import os
 
@@ -25,6 +26,19 @@ from app.api.v1.schemas.cleaning_schema import (
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+def _to_native_types(obj):
+    """Recursively convert NumPy / pandas scalar types to native Python types."""
+    if isinstance(obj, np.generic):
+        return obj.item()
+    if isinstance(obj, dict):
+        return {k: _to_native_types(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_to_native_types(v) for v in obj]
+    if isinstance(obj, tuple):
+        return tuple(_to_native_types(v) for v in obj)
+    return obj
 
 
 # ==================== CLEANING PROFILES ====================
@@ -151,6 +165,7 @@ async def clean_dataset(
     }
     
     df_clean, cleaning_report = CleaningService.clean_dataframe(df, profile_dict)
+    cleaning_report = _to_native_types(cleaning_report)
     
     # Save cleaned data
     if save_as_new:
@@ -203,12 +218,12 @@ async def clean_dataset(
         db,
         dataset_id=target_dataset_id,
         profile_id=profile.id,
-        rows_before=cleaning_report["rows_before"],
-        rows_after=cleaning_report["rows_after"],
-        duplicates_removed=cleaning_report["changes"].get("duplicates", {}).get("duplicates_removed", 0),
-        missing_values_handled=cleaning_report["changes"].get("missing_values", {}).get("total_filled", 0),
-        outliers_detected=cleaning_report["changes"].get("outliers", {}).get("total_outliers", 0),
-        data_types_fixed=cleaning_report["changes"].get("data_types", {}).get("types_changed", 0),
+        rows_before=int(cleaning_report["rows_before"]),
+        rows_after=int(cleaning_report["rows_after"]),
+        duplicates_removed=int(cleaning_report["changes"].get("duplicates", {}).get("duplicates_removed", 0)),
+        missing_values_handled=int(cleaning_report["changes"].get("missing_values", {}).get("total_filled", 0)),
+        outliers_detected=int(cleaning_report["changes"].get("outliers", {}).get("total_outliers", 0)),
+        data_types_fixed=int(cleaning_report["changes"].get("data_types", {}).get("types_changed", 0)),
         operations_performed=cleaning_report["operations"],
         cleaning_report=cleaning_report
     )

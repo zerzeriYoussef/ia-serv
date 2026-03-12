@@ -15,7 +15,11 @@ great-expectations>=0.18.8
 
 # ML / preprocessing
 scikit-learn>=1.8.0  # provides sklearn.preprocessing scalers
+# Data relationship detection
+ydata-profiling>=4.7.0
 
+# Build tooling (for ydata-profiling/pkg_resources compatibility)
+setuptools<82
 # Database
 # SQLAlchemy 2.0.31+ includes fixes for Python 3.13 compatibility
 sqlalchemy>=2.0.31

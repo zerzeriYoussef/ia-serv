@@ -23,6 +23,8 @@ ingestion_service = IngestionService()
 async def process_file_background(dataset_id: int, file_path: str, file_type: str):
     """Background task to process uploaded file"""
     from app.core.database import AsyncSessionLocal
+    from app.services.analysis.column_analyzer import ColumnAnalyzer
+    from app.repositories.analysis_repository import AnalysisRepository
     
     async with AsyncSessionLocal() as db:
         try:
@@ -42,7 +44,44 @@ async def process_file_background(dataset_id: int, file_path: str, file_type: st
                 "status": DatasetStatus.PROCESSED
             })
             
+            await db.commit()  # Commit dataset metadata first
+            
             logger.info(f"Dataset {dataset_id} processed successfully")
+            
+            # AUTO-ANALYZE (separate try-catch so it doesn't fail upload)
+            try:
+                logger.info(f"Starting auto-analysis for dataset {dataset_id}...")
+                
+                analyzer = ColumnAnalyzer(df)
+                analysis_results = analyzer.analyze()
+                
+                # Save analysis
+                await AnalysisRepository.create(
+                    db,
+                    dataset_id=dataset_id,
+                    metrics=analysis_results["column_categories"]["metrics"],
+                    dimensions=analysis_results["column_categories"]["dimensions"],
+                    identifiers=analysis_results["column_categories"]["identifiers"],
+                    temporal=analysis_results["column_categories"]["temporal"],
+                    geographic=analysis_results["column_categories"]["geographic"],
+                    other=analysis_results["column_categories"]["other"],
+                    relationships=analysis_results["relationships"],
+                    dashboard_columns=analysis_results["dashboard_columns"],
+                    primary_metric=analysis_results["primary_metric"],
+                    confidence_score=analysis_results["confidence_score"],
+                    total_relationships=len(analysis_results["relationships"])
+                )
+                
+                await db.commit()
+                
+                logger.info(
+                    f"Auto-analysis complete for dataset {dataset_id}: "
+                    f"{len(analysis_results['relationships'])} relationships found"
+                )
+                
+            except Exception as e:
+                logger.error(f"Auto-analysis failed for dataset {dataset_id}: {e}")
+                # Don't fail the whole upload - analysis can be run manually later
             
         except Exception as e:
             logger.error(f"Error processing dataset {dataset_id}: {e}")
