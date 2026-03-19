@@ -80,6 +80,31 @@ class DatasetRepository:
         return await DatasetRepository.get_by_id(db, dataset_id)
     
     @staticmethod
+    async def get_by_user_id(
+        db: AsyncSession,
+        user_id: str,
+        skip: int = 0,
+        limit: int = 100,
+    ) -> List[Dataset]:
+        """Get datasets belonging to a specific user, newest first."""
+        result = await db.execute(
+            select(Dataset)
+            .where(Dataset.user_id == user_id)
+            .order_by(Dataset.created_at.desc())
+            .offset(skip)
+            .limit(limit)
+        )
+        return result.scalars().all()
+
+    @staticmethod
+    async def count_by_user_id(db: AsyncSession, user_id: str) -> int:
+        """Count datasets belonging to a specific user."""
+        result = await db.execute(
+            select(func.count(Dataset.id)).where(Dataset.user_id == user_id)
+        )
+        return result.scalar()
+
+    @staticmethod
     async def delete(db: AsyncSession, dataset_id: int) -> bool:
         """Delete dataset"""
         result = await db.execute(

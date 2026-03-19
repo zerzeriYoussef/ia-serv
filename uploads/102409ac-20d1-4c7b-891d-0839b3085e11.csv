@@ -1,0 +1,421 @@
+user_id,age_group,role,primary_platform,learning_device,hours_per_week,learning_purpose,content_type_preference,completion_rate_percent,satisfaction_score
+1,35-44,Working Professional,edX,Laptop,10,Career Growth,Text,34,5
+2,45+,Other,edX,Mobile,12,Career Growth,Text,17,3
+3,25-34,Freelancer,Skillshare,Desktop,2,Academic,Text,67,9
+4,45+,Working Professional,Udemy,Mobile,3,Career Growth,Mixed,25,5
+5,45+,Working Professional,Khan Academy,Mobile,10,Hobby,Video,81,5
+6,18-24,Freelancer,Khan Academy,Mobile,2,Hobby,Text,10,4
+7,25-34,Working Professional,Skillshare,Tablet,13,Hobby,Video,14,4
+8,25-34,Other,YouTube,Tablet,13,Hobby,Video,12,1
+9,25-34,Student,Udemy,Laptop,18,Career Growth,Mixed,74,7
+10,45+,Other,Skillshare,Laptop,3,Academic,Video,13,9
+11,35-44,Student,Udemy,Desktop,7,Academic,Video,73,3
+12,25-34,Student,Udemy,Laptop,14,Academic,Mixed,98,2
+13,45+,Other,Udemy,Mobile,20,Academic,Text,19,3
+14,18-24,Other,Skillshare,Mobile,17,Skill Upgrade,Video,30,1
+15,35-44,Other,Khan Academy,Tablet,12,Academic,Mixed,55,6
+16,18-24,Other,Khan Academy,Mobile,16,Skill Upgrade,Video,100,7
+17,35-44,Freelancer,Udemy,Desktop,12,Skill Upgrade,Video,36,2
+18,45+,Working Professional,YouTube,Mobile,15,Hobby,Text,75,8
+19,Under 18,Student,Coursera,Mobile,10,Skill Upgrade,Video,50,6
+20,35-44,Other,Skillshare,Desktop,7,Career Growth,Mixed,22,4
+21,18-24,Other,Coursera,Laptop,20,Skill Upgrade,Video,18,5
+22,45+,Other,YouTube,Laptop,5,Hobby,Text,45,8
+23,35-44,Freelancer,Skillshare,Desktop,1,Skill Upgrade,Text,95,3
+24,Under 18,Other,Udemy,Tablet,17,Career Growth,Mixed,99,3
+25,Under 18,Other,Khan Academy,Mobile,3,Career Growth,Text,67,4
+26,25-34,Other,Coursera,Desktop,13,Career Growth,Video,63,1
+27,25-34,Working Professional,edX,Mobile,14,Hobby,Text,21,9
+28,18-24,Freelancer,edX,Tablet,18,Hobby,Mixed,90,8
+29,35-44,Other,YouTube,Mobile,4,Academic,Text,87,8
+30,35-44,Student,Udemy,Desktop,18,Hobby,Text,23,10
+31,25-34,Student,Coursera,Mobile,5,Career Growth,Text,43,6
+32,35-44,Student,Udemy,Laptop,16,Career Growth,Mixed,62,7
+33,35-44,Freelancer,Coursera,Tablet,1,Hobby,Text,29,6
+34,Under 18,Freelancer,YouTube,Tablet,14,Skill Upgrade,Text,84,9
+35,25-34,Student,YouTube,Tablet,15,Hobby,Video,25,3
+36,45+,Other,edX,Desktop,9,Hobby,Mixed,79,3
+37,25-34,Freelancer,Udemy,Tablet,15,Career Growth,Text,65,3
+38,45+,Student,Skillshare,Laptop,17,Academic,Mixed,92,10
+39,Under 18,Student,edX,Desktop,4,Career Growth,Text,67,3
+40,18-24,Other,Udemy,Laptop,12,Academic,Text,13,9
+41,35-44,Working Professional,edX,Mobile,5,Career Growth,Text,13,4
+42,Under 18,Freelancer,Skillshare,Mobile,5,Hobby,Video,29,7
+43,35-44,Other,Khan Academy,Mobile,11,Career Growth,Video,19,9
+44,18-24,Student,Khan Academy,Mobile,6,Career Growth,Video,33,7
+45,18-24,Student,Khan Academy,Laptop,7,Career Growth,Mixed,35,9
+46,Under 18,Other,Khan Academy,Desktop,14,Hobby,Mixed,46,3
+47,18-24,Freelancer,Coursera,Desktop,11,Hobby,Video,94,4
+48,45+,Working Professional,Khan Academy,Tablet,13,Hobby,Mixed,63,8
+49,18-24,Working Professional,Skillshare,Laptop,2,Hobby,Text,30,6
+50,35-44,Student,YouTube,Mobile,7,Academic,Text,83,5
+51,35-44,Freelancer,YouTube,Laptop,20,Academic,Text,47,4
+52,35-44,Working Professional,Coursera,Tablet,4,Skill Upgrade,Video,55,8
+53,35-44,Freelancer,Khan Academy,Tablet,8,Hobby,Mixed,13,1
+54,45+,Freelancer,Khan Academy,Laptop,20,Academic,Video,69,9
+55,25-34,Student,Khan Academy,Laptop,19,Career Growth,Mixed,66,1
+56,Under 18,Working Professional,edX,Laptop,13,Hobby,Text,54,8
+57,35-44,Other,Udemy,Desktop,14,Skill Upgrade,Video,29,4
+58,18-24,Student,edX,Mobile,10,Skill Upgrade,Mixed,26,9
+59,35-44,Working Professional,Udemy,Laptop,11,Skill Upgrade,Mixed,80,5
+60,18-24,Working Professional,Khan Academy,Laptop,2,Career Growth,Text,13,3
+61,18-24,Working Professional,Khan Academy,Laptop,9,Academic,Video,23,9
+62,35-44,Working Professional,edX,Tablet,17,Career Growth,Video,12,9
+63,45+,Working Professional,edX,Tablet,3,Hobby,Video,97,4
+64,18-24,Freelancer,Udemy,Desktop,6,Skill Upgrade,Text,89,4
+65,18-24,Student,YouTube,Mobile,5,Career Growth,Video,67,8
+66,35-44,Freelancer,Udemy,Desktop,5,Career Growth,Text,64,2
+67,18-24,Other,edX,Mobile,15,Academic,Text,13,9
+68,18-24,Working Professional,Skillshare,Tablet,17,Academic,Text,33,6
+69,35-44,Student,edX,Tablet,9,Skill Upgrade,Mixed,43,9
+70,35-44,Working Professional,Skillshare,Tablet,3,Career Growth,Video,39,8
+71,Under 18,Student,Coursera,Desktop,20,Career Growth,Video,91,7
+72,45+,Freelancer,edX,Laptop,17,Academic,Text,28,1
+73,45+,Student,Coursera,Laptop,10,Career Growth,Text,40,3
+74,18-24,Other,YouTube,Tablet,3,Career Growth,Video,69,2
+75,45+,Other,Udemy,Laptop,18,Career Growth,Text,69,5
+76,18-24,Student,Skillshare,Laptop,18,Academic,Video,28,5
+77,Under 18,Student,Udemy,Desktop,17,Skill Upgrade,Mixed,58,5
+78,35-44,Student,Coursera,Mobile,3,Hobby,Text,72,4
+79,35-44,Student,Skillshare,Tablet,3,Skill Upgrade,Video,92,5
+80,35-44,Other,Udemy,Tablet,6,Hobby,Text,31,3
+81,45+,Working Professional,edX,Desktop,13,Career Growth,Video,33,1
+82,Under 18,Student,Khan Academy,Desktop,15,Skill Upgrade,Video,85,5
+83,45+,Student,Coursera,Laptop,9,Hobby,Text,39,9
+84,45+,Other,Udemy,Tablet,4,Academic,Mixed,67,9
+85,Under 18,Other,Coursera,Mobile,14,Academic,Video,40,4
+86,Under 18,Freelancer,Coursera,Desktop,5,Skill Upgrade,Video,73,3
+87,Under 18,Student,Skillshare,Mobile,2,Skill Upgrade,Video,28,1
+88,Under 18,Freelancer,Skillshare,Mobile,11,Career Growth,Mixed,57,2
+89,35-44,Other,Khan Academy,Tablet,9,Skill Upgrade,Mixed,54,8
+90,25-34,Other,edX,Tablet,3,Career Growth,Text,64,1
+91,25-34,Working Professional,Coursera,Desktop,9,Career Growth,Mixed,64,8
+92,Under 18,Student,Udemy,Tablet,3,Academic,Text,27,7
+93,25-34,Freelancer,YouTube,Tablet,2,Academic,Text,72,8
+94,25-34,Other,Coursera,Tablet,12,Hobby,Mixed,56,6
+95,Under 18,Other,Coursera,Mobile,10,Academic,Text,84,9
+96,25-34,Freelancer,Khan Academy,Desktop,9,Academic,Mixed,66,3
+97,45+,Working Professional,edX,Laptop,15,Skill Upgrade,Text,54,10
+98,18-24,Other,YouTube,Mobile,8,Academic,Mixed,42,4
+99,18-24,Student,Skillshare,Tablet,5,Hobby,Mixed,26,6
+100,Under 18,Other,Skillshare,Mobile,11,Skill Upgrade,Text,79,8
+101,35-44,Student,Udemy,Tablet,2,Hobby,Video,13,5
+102,Under 18,Freelancer,YouTube,Tablet,15,Academic,Text,29,3
+103,35-44,Student,Skillshare,Mobile,6,Hobby,Mixed,56,6
+104,18-24,Freelancer,Udemy,Desktop,8,Skill Upgrade,Video,100,4
+105,Under 18,Student,edX,Tablet,5,Career Growth,Text,24,9
+106,45+,Freelancer,Udemy,Desktop,16,Hobby,Text,79,3
+107,25-34,Student,Skillshare,Laptop,18,Hobby,Text,56,4
+108,35-44,Working Professional,Khan Academy,Tablet,6,Skill Upgrade,Video,87,7
+109,25-34,Student,Khan Academy,Desktop,5,Skill Upgrade,Mixed,84,7
+110,25-34,Student,Khan Academy,Desktop,16,Hobby,Text,18,4
+111,Under 18,Working Professional,Skillshare,Laptop,13,Academic,Text,99,6
+112,25-34,Other,Khan Academy,Desktop,5,Hobby,Text,25,3
+113,45+,Other,YouTube,Desktop,13,Skill Upgrade,Text,78,6
+114,25-34,Student,edX,Laptop,17,Career Growth,Text,70,2
+115,Under 18,Working Professional,Udemy,Tablet,18,Career Growth,Mixed,19,8
+116,45+,Student,Udemy,Desktop,8,Academic,Mixed,59,2
+117,18-24,Freelancer,Skillshare,Desktop,13,Hobby,Text,12,7
+118,25-34,Freelancer,Khan Academy,Desktop,19,Career Growth,Video,86,9
+119,Under 18,Student,Khan Academy,Mobile,3,Hobby,Mixed,79,1
+120,18-24,Other,Coursera,Laptop,8,Skill Upgrade,Video,90,8
+121,18-24,Other,edX,Mobile,2,Career Growth,Mixed,60,7
+122,35-44,Student,YouTube,Laptop,8,Academic,Text,28,6
+123,45+,Student,Udemy,Tablet,13,Skill Upgrade,Mixed,51,6
+124,25-34,Freelancer,Coursera,Tablet,13,Academic,Text,44,6
+125,Under 18,Other,Coursera,Desktop,1,Skill Upgrade,Mixed,55,9
+126,35-44,Student,Skillshare,Laptop,6,Career Growth,Text,35,2
+127,45+,Freelancer,Udemy,Tablet,19,Academic,Text,78,1
+128,35-44,Other,Skillshare,Laptop,16,Academic,Text,73,6
+129,45+,Working Professional,YouTube,Tablet,8,Skill Upgrade,Text,46,10
+130,45+,Freelancer,Coursera,Mobile,1,Academic,Video,93,8
+131,25-34,Other,Coursera,Tablet,16,Skill Upgrade,Text,58,3
+132,45+,Other,edX,Mobile,9,Skill Upgrade,Video,30,10
+133,35-44,Freelancer,YouTube,Tablet,13,Skill Upgrade,Video,83,1
+134,45+,Working Professional,Coursera,Desktop,11,Skill Upgrade,Text,73,9
+135,25-34,Freelancer,YouTube,Mobile,13,Career Growth,Video,14,1
+136,25-34,Other,Udemy,Tablet,10,Skill Upgrade,Mixed,79,3
+137,35-44,Student,Khan Academy,Desktop,4,Hobby,Text,99,8
+138,18-24,Student,Coursera,Mobile,6,Academic,Video,13,3
+139,18-24,Freelancer,edX,Desktop,7,Hobby,Text,48,4
+140,45+,Other,Udemy,Laptop,5,Career Growth,Text,44,8
+141,Under 18,Student,YouTube,Laptop,11,Hobby,Text,10,1
+142,45+,Other,Skillshare,Mobile,13,Academic,Video,33,6
+143,35-44,Freelancer,Udemy,Tablet,19,Hobby,Mixed,66,1
+144,35-44,Student,Coursera,Mobile,10,Career Growth,Mixed,79,1
+145,35-44,Other,YouTube,Desktop,10,Skill Upgrade,Video,50,8
+146,35-44,Student,Khan Academy,Tablet,11,Hobby,Text,63,4
+147,35-44,Freelancer,Udemy,Laptop,7,Career Growth,Video,55,1
+148,25-34,Other,Coursera,Tablet,18,Career Growth,Video,69,10
+149,18-24,Student,edX,Laptop,4,Academic,Video,69,7
+150,35-44,Freelancer,Skillshare,Tablet,2,Academic,Text,66,5
+151,Under 18,Student,YouTube,Tablet,14,Hobby,Video,40,5
+152,Under 18,Student,Udemy,Tablet,13,Skill Upgrade,Text,93,1
+153,Under 18,Working Professional,Udemy,Desktop,12,Career Growth,Video,33,10
+154,Under 18,Working Professional,Khan Academy,Desktop,7,Hobby,Mixed,98,6
+155,25-34,Freelancer,Khan Academy,Mobile,2,Career Growth,Video,45,9
+156,Under 18,Working Professional,edX,Mobile,13,Career Growth,Video,94,9
+157,35-44,Freelancer,Skillshare,Laptop,14,Skill Upgrade,Mixed,39,8
+158,45+,Working Professional,edX,Desktop,17,Skill Upgrade,Text,33,5
+159,Under 18,Student,Coursera,Laptop,9,Hobby,Text,39,1
+160,25-34,Freelancer,Coursera,Mobile,17,Skill Upgrade,Video,95,9
+161,25-34,Freelancer,edX,Laptop,8,Skill Upgrade,Mixed,16,1
+162,Under 18,Student,Skillshare,Mobile,2,Hobby,Text,44,8
+163,45+,Freelancer,edX,Desktop,13,Skill Upgrade,Video,64,5
+164,Under 18,Freelancer,Skillshare,Tablet,3,Academic,Mixed,23,3
+165,25-34,Working Professional,Skillshare,Desktop,16,Career Growth,Text,19,7
+166,18-24,Freelancer,YouTube,Laptop,6,Career Growth,Text,89,7
+167,35-44,Other,Skillshare,Laptop,19,Career Growth,Mixed,25,9
+168,25-34,Student,Khan Academy,Desktop,7,Career Growth,Mixed,63,7
+169,Under 18,Working Professional,Skillshare,Desktop,10,Hobby,Mixed,98,3
+170,35-44,Working Professional,Skillshare,Mobile,9,Career Growth,Mixed,86,1
+171,Under 18,Other,Skillshare,Laptop,2,Career Growth,Video,79,8
+172,Under 18,Student,Coursera,Laptop,15,Career Growth,Mixed,53,3
+173,18-24,Student,Khan Academy,Desktop,5,Career Growth,Text,82,8
+174,35-44,Working Professional,Khan Academy,Tablet,4,Academic,Text,54,8
+175,35-44,Freelancer,edX,Laptop,20,Career Growth,Video,65,5
+176,18-24,Working Professional,YouTube,Tablet,4,Academic,Text,93,1
+177,25-34,Student,Skillshare,Desktop,18,Hobby,Text,91,10
+178,Under 18,Other,Udemy,Desktop,4,Skill Upgrade,Mixed,66,7
+179,45+,Working Professional,YouTube,Mobile,17,Career Growth,Text,30,10
+180,Under 18,Student,YouTube,Laptop,12,Skill Upgrade,Video,77,5
+181,Under 18,Working Professional,Khan Academy,Tablet,17,Skill Upgrade,Mixed,59,8
+182,25-34,Freelancer,YouTube,Mobile,10,Hobby,Mixed,42,9
+183,Under 18,Working Professional,Skillshare,Laptop,1,Skill Upgrade,Video,100,7
+184,18-24,Working Professional,Skillshare,Mobile,18,Academic,Mixed,16,7
+185,18-24,Student,Coursera,Desktop,18,Skill Upgrade,Mixed,79,1
+186,35-44,Student,Skillshare,Laptop,14,Skill Upgrade,Video,24,4
+187,45+,Student,Skillshare,Mobile,15,Skill Upgrade,Mixed,91,2
+188,Under 18,Working Professional,Khan Academy,Mobile,12,Career Growth,Video,41,2
+189,Under 18,Freelancer,Skillshare,Tablet,4,Career Growth,Video,84,2
+190,25-34,Other,Coursera,Mobile,3,Academic,Text,29,4
+191,18-24,Other,Udemy,Laptop,20,Academic,Text,97,1
+192,45+,Student,Khan Academy,Laptop,12,Career Growth,Mixed,24,4
+193,35-44,Student,Udemy,Tablet,7,Academic,Mixed,57,2
+194,18-24,Working Professional,Khan Academy,Laptop,11,Career Growth,Video,80,5
+195,35-44,Other,edX,Desktop,1,Hobby,Mixed,30,3
+196,25-34,Student,YouTube,Laptop,6,Skill Upgrade,Video,51,8
+197,25-34,Freelancer,edX,Laptop,15,Skill Upgrade,Video,35,4
+198,Under 18,Freelancer,Skillshare,Mobile,15,Academic,Mixed,23,1
+199,45+,Student,Udemy,Mobile,19,Career Growth,Video,66,1
+200,35-44,Student,Skillshare,Laptop,11,Career Growth,Text,46,10
+201,18-24,Other,YouTube,Tablet,2,Academic,Mixed,67,3
+202,25-34,Other,Khan Academy,Mobile,14,Career Growth,Text,30,9
+203,Under 18,Working Professional,YouTube,Tablet,2,Hobby,Mixed,91,7
+204,Under 18,Other,Coursera,Laptop,4,Skill Upgrade,Video,78,2
+205,35-44,Freelancer,YouTube,Laptop,17,Academic,Mixed,12,9
+206,25-34,Freelancer,Coursera,Desktop,3,Academic,Text,96,10
+207,45+,Student,YouTube,Mobile,13,Career Growth,Video,99,2
+208,25-34,Other,Coursera,Laptop,9,Academic,Mixed,46,3
+209,35-44,Working Professional,Udemy,Desktop,7,Hobby,Mixed,97,10
+210,35-44,Freelancer,Skillshare,Mobile,15,Career Growth,Mixed,58,2
+211,25-34,Freelancer,Skillshare,Laptop,11,Career Growth,Text,28,3
+212,35-44,Working Professional,edX,Laptop,20,Career Growth,Text,98,6
+213,25-34,Working Professional,Skillshare,Mobile,2,Career Growth,Mixed,94,9
+214,18-24,Freelancer,Khan Academy,Mobile,15,Hobby,Video,21,9
+215,25-34,Freelancer,YouTube,Mobile,14,Career Growth,Video,70,7
+216,25-34,Working Professional,edX,Laptop,20,Academic,Text,50,3
+217,35-44,Freelancer,Khan Academy,Laptop,11,Hobby,Video,42,4
+218,35-44,Student,Khan Academy,Desktop,3,Skill Upgrade,Text,59,6
+219,Under 18,Student,Coursera,Tablet,17,Skill Upgrade,Mixed,77,5
+220,Under 18,Working Professional,Skillshare,Mobile,12,Academic,Text,80,2
+221,18-24,Other,Udemy,Laptop,15,Academic,Text,95,6
+222,Under 18,Working Professional,Udemy,Laptop,16,Hobby,Mixed,42,3
+223,25-34,Working Professional,edX,Mobile,5,Skill Upgrade,Video,90,8
+224,35-44,Other,Udemy,Tablet,20,Skill Upgrade,Text,33,2
+225,Under 18,Other,YouTube,Mobile,6,Skill Upgrade,Text,70,1
+226,Under 18,Other,Udemy,Tablet,19,Skill Upgrade,Mixed,70,9
+227,18-24,Student,edX,Laptop,5,Skill Upgrade,Video,37,3
+228,18-24,Freelancer,Udemy,Tablet,3,Career Growth,Text,67,1
+229,25-34,Student,YouTube,Desktop,1,Academic,Mixed,52,7
+230,35-44,Freelancer,Coursera,Laptop,6,Career Growth,Text,50,10
+231,18-24,Student,edX,Desktop,15,Skill Upgrade,Mixed,48,5
+232,Under 18,Freelancer,Coursera,Mobile,2,Hobby,Video,95,5
+233,35-44,Student,Coursera,Mobile,3,Hobby,Video,58,1
+234,35-44,Other,Coursera,Mobile,17,Skill Upgrade,Video,26,9
+235,Under 18,Working Professional,Khan Academy,Tablet,12,Skill Upgrade,Video,79,7
+236,18-24,Student,Skillshare,Laptop,18,Hobby,Text,79,8
+237,Under 18,Freelancer,Khan Academy,Mobile,15,Career Growth,Text,74,9
+238,35-44,Other,Skillshare,Mobile,12,Career Growth,Video,83,6
+239,45+,Student,Coursera,Laptop,16,Skill Upgrade,Video,94,5
+240,45+,Student,edX,Mobile,8,Career Growth,Video,14,6
+241,25-34,Other,Skillshare,Desktop,14,Hobby,Text,11,2
+242,Under 18,Student,YouTube,Laptop,17,Career Growth,Video,31,4
+243,Under 18,Working Professional,YouTube,Laptop,8,Skill Upgrade,Video,66,3
+244,25-34,Student,Udemy,Laptop,15,Hobby,Video,75,7
+245,25-34,Working Professional,Skillshare,Desktop,14,Career Growth,Mixed,83,9
+246,25-34,Working Professional,edX,Laptop,18,Academic,Video,25,5
+247,35-44,Other,Khan Academy,Desktop,20,Hobby,Mixed,60,6
+248,Under 18,Student,Coursera,Laptop,7,Hobby,Mixed,48,10
+249,35-44,Other,Udemy,Tablet,3,Academic,Video,95,2
+250,25-34,Student,YouTube,Mobile,12,Academic,Mixed,85,3
+251,Under 18,Student,Khan Academy,Tablet,3,Hobby,Video,97,3
+252,35-44,Freelancer,Khan Academy,Mobile,20,Academic,Text,49,9
+253,35-44,Student,Coursera,Desktop,14,Skill Upgrade,Text,47,7
+254,25-34,Other,Skillshare,Tablet,15,Skill Upgrade,Text,69,8
+255,Under 18,Working Professional,YouTube,Laptop,14,Skill Upgrade,Text,68,10
+256,25-34,Student,edX,Mobile,7,Hobby,Mixed,19,9
+257,Under 18,Freelancer,Khan Academy,Mobile,17,Academic,Video,73,6
+258,45+,Other,Coursera,Tablet,12,Academic,Video,72,4
+259,18-24,Student,edX,Desktop,20,Career Growth,Video,58,1
+260,18-24,Other,Skillshare,Tablet,4,Career Growth,Text,73,8
+261,18-24,Freelancer,YouTube,Desktop,9,Academic,Text,41,7
+262,25-34,Freelancer,Skillshare,Desktop,6,Academic,Video,16,2
+263,45+,Other,Khan Academy,Mobile,16,Academic,Text,30,8
+264,Under 18,Student,edX,Tablet,2,Hobby,Video,29,5
+265,35-44,Working Professional,edX,Tablet,8,Academic,Video,35,7
+266,Under 18,Freelancer,edX,Desktop,11,Career Growth,Video,77,4
+267,35-44,Student,Khan Academy,Tablet,13,Hobby,Video,95,5
+268,Under 18,Student,Khan Academy,Laptop,17,Academic,Video,24,8
+269,45+,Working Professional,Skillshare,Laptop,8,Career Growth,Video,94,1
+270,35-44,Freelancer,Udemy,Tablet,18,Hobby,Video,88,1
+271,25-34,Freelancer,Skillshare,Tablet,18,Academic,Text,95,4
+272,Under 18,Student,YouTube,Desktop,14,Academic,Video,23,3
+273,Under 18,Student,Coursera,Laptop,15,Academic,Video,36,10
+274,35-44,Working Professional,edX,Laptop,6,Hobby,Text,49,2
+275,25-34,Working Professional,Udemy,Mobile,11,Career Growth,Text,67,3
+276,25-34,Freelancer,Coursera,Desktop,13,Career Growth,Text,37,1
+277,45+,Other,Udemy,Mobile,1,Skill Upgrade,Video,35,1
+278,25-34,Freelancer,Skillshare,Laptop,6,Academic,Mixed,72,6
+279,25-34,Student,Khan Academy,Desktop,9,Skill Upgrade,Mixed,75,5
+280,25-34,Freelancer,edX,Tablet,8,Skill Upgrade,Text,34,8
+281,18-24,Other,Skillshare,Desktop,11,Career Growth,Mixed,12,2
+282,45+,Working Professional,Coursera,Tablet,19,Hobby,Text,81,4
+283,Under 18,Other,Coursera,Tablet,9,Hobby,Video,53,8
+284,35-44,Other,Coursera,Desktop,17,Career Growth,Mixed,51,6
+285,Under 18,Other,Coursera,Tablet,12,Hobby,Video,15,1
+286,45+,Working Professional,Coursera,Mobile,14,Skill Upgrade,Mixed,48,4
+287,35-44,Other,Udemy,Laptop,15,Academic,Video,61,1
+288,45+,Other,Skillshare,Tablet,16,Career Growth,Mixed,32,2
+289,25-34,Other,edX,Mobile,20,Academic,Video,98,5
+290,35-44,Student,Khan Academy,Tablet,1,Hobby,Video,59,8
+291,25-34,Other,Khan Academy,Laptop,10,Academic,Mixed,52,8
+292,Under 18,Working Professional,Skillshare,Mobile,8,Hobby,Video,28,3
+293,Under 18,Other,Skillshare,Laptop,18,Hobby,Video,78,4
+294,35-44,Other,Khan Academy,Laptop,1,Skill Upgrade,Video,60,10
+295,35-44,Working Professional,Khan Academy,Mobile,2,Hobby,Mixed,20,6
+296,45+,Other,Udemy,Mobile,1,Skill Upgrade,Mixed,21,10
+297,45+,Working Professional,YouTube,Mobile,1,Skill Upgrade,Video,83,3
+298,25-34,Other,edX,Desktop,9,Skill Upgrade,Video,17,2
+299,35-44,Working Professional,Coursera,Mobile,13,Career Growth,Mixed,33,6
+300,Under 18,Other,YouTube,Mobile,1,Career Growth,Mixed,50,5
+301,45+,Other,Skillshare,Mobile,13,Hobby,Video,45,10
+302,45+,Student,Khan Academy,Mobile,20,Skill Upgrade,Video,94,5
+303,Under 18,Student,YouTube,Tablet,7,Career Growth,Video,81,10
+304,45+,Other,edX,Desktop,2,Skill Upgrade,Text,64,5
+305,25-34,Other,Skillshare,Laptop,6,Academic,Mixed,18,10
+306,35-44,Freelancer,Coursera,Mobile,7,Academic,Text,56,5
+307,Under 18,Working Professional,Coursera,Tablet,14,Academic,Mixed,24,3
+308,35-44,Freelancer,edX,Tablet,18,Hobby,Mixed,57,7
+309,45+,Student,edX,Tablet,15,Skill Upgrade,Mixed,91,6
+310,45+,Student,Khan Academy,Laptop,2,Academic,Mixed,51,4
+311,Under 18,Student,Coursera,Mobile,10,Career Growth,Mixed,69,2
+312,25-34,Student,Skillshare,Desktop,12,Academic,Mixed,93,9
+313,18-24,Other,YouTube,Desktop,17,Academic,Mixed,79,1
+314,Under 18,Student,Skillshare,Tablet,8,Academic,Text,21,4
+315,18-24,Other,Udemy,Laptop,11,Hobby,Video,11,1
+316,18-24,Other,Udemy,Laptop,3,Career Growth,Video,16,6
+317,25-34,Student,edX,Laptop,6,Skill Upgrade,Text,89,4
+318,18-24,Student,Khan Academy,Desktop,9,Career Growth,Text,12,5
+319,18-24,Working Professional,Udemy,Tablet,6,Skill Upgrade,Text,12,5
+320,25-34,Freelancer,Coursera,Mobile,9,Hobby,Text,36,9
+321,18-24,Student,Skillshare,Desktop,7,Hobby,Mixed,49,1
+322,18-24,Working Professional,Skillshare,Tablet,9,Hobby,Video,42,2
+323,18-24,Working Professional,edX,Tablet,18,Hobby,Mixed,10,6
+324,Under 18,Freelancer,YouTube,Mobile,12,Skill Upgrade,Video,17,5
+325,Under 18,Other,edX,Mobile,8,Academic,Video,41,7
+326,Under 18,Student,YouTube,Mobile,8,Skill Upgrade,Text,57,3
+327,25-34,Freelancer,edX,Laptop,18,Career Growth,Mixed,13,3
+328,45+,Student,edX,Mobile,20,Hobby,Text,79,10
+329,18-24,Working Professional,edX,Tablet,15,Hobby,Mixed,28,2
+330,18-24,Working Professional,YouTube,Mobile,7,Career Growth,Video,41,3
+331,25-34,Other,YouTube,Tablet,11,Skill Upgrade,Text,18,10
+332,18-24,Working Professional,edX,Desktop,20,Academic,Text,21,1
+333,Under 18,Working Professional,Udemy,Laptop,16,Academic,Video,20,5
+334,45+,Freelancer,Khan Academy,Desktop,4,Career Growth,Video,55,5
+335,35-44,Student,Khan Academy,Desktop,6,Academic,Video,25,7
+336,18-24,Student,Khan Academy,Tablet,3,Skill Upgrade,Text,10,4
+337,Under 18,Freelancer,YouTube,Desktop,9,Skill Upgrade,Mixed,72,3
+338,35-44,Other,YouTube,Tablet,10,Career Growth,Text,30,1
+339,45+,Student,Udemy,Mobile,14,Skill Upgrade,Mixed,39,8
+340,35-44,Working Professional,Khan Academy,Mobile,11,Hobby,Text,22,3
+341,Under 18,Student,Khan Academy,Tablet,18,Career Growth,Text,43,2
+342,35-44,Working Professional,edX,Mobile,12,Skill Upgrade,Video,13,4
+343,25-34,Other,YouTube,Laptop,12,Career Growth,Mixed,37,3
+344,35-44,Freelancer,Khan Academy,Desktop,13,Academic,Text,68,1
+345,18-24,Student,Skillshare,Laptop,13,Skill Upgrade,Text,36,3
+346,18-24,Freelancer,Udemy,Desktop,19,Hobby,Video,78,2
+347,25-34,Student,Skillshare,Mobile,19,Skill Upgrade,Video,34,8
+348,Under 18,Working Professional,Skillshare,Laptop,14,Career Growth,Mixed,12,6
+349,18-24,Freelancer,Udemy,Mobile,4,Career Growth,Text,77,9
+350,45+,Student,Skillshare,Desktop,13,Skill Upgrade,Mixed,34,8
+351,18-24,Working Professional,Khan Academy,Tablet,8,Hobby,Text,29,10
+352,18-24,Freelancer,YouTube,Tablet,19,Hobby,Mixed,43,3
+353,Under 18,Freelancer,Udemy,Laptop,12,Hobby,Video,35,5
+354,35-44,Student,edX,Mobile,18,Career Growth,Text,14,7
+355,18-24,Student,Skillshare,Mobile,6,Skill Upgrade,Mixed,70,5
+356,25-34,Student,Udemy,Laptop,18,Academic,Video,18,8
+357,35-44,Working Professional,Coursera,Tablet,19,Career Growth,Video,59,5
+358,45+,Student,Coursera,Desktop,5,Hobby,Mixed,15,1
+359,Under 18,Freelancer,YouTube,Laptop,9,Skill Upgrade,Text,92,5
+360,45+,Freelancer,Khan Academy,Desktop,3,Hobby,Text,69,4
+361,35-44,Student,YouTube,Tablet,10,Academic,Video,53,6
+362,35-44,Student,YouTube,Mobile,19,Hobby,Text,20,3
+363,35-44,Other,YouTube,Tablet,3,Hobby,Text,75,5
+364,45+,Freelancer,YouTube,Laptop,15,Academic,Text,56,2
+365,35-44,Working Professional,edX,Mobile,1,Skill Upgrade,Video,82,6
+366,45+,Other,edX,Laptop,7,Career Growth,Mixed,94,6
+367,35-44,Student,Udemy,Laptop,12,Skill Upgrade,Text,97,5
+368,25-34,Student,Coursera,Tablet,17,Academic,Video,95,6
+369,35-44,Freelancer,YouTube,Laptop,20,Hobby,Video,12,7
+370,45+,Student,Udemy,Tablet,5,Skill Upgrade,Mixed,85,5
+371,18-24,Working Professional,Coursera,Mobile,4,Career Growth,Text,39,1
+372,35-44,Freelancer,Skillshare,Tablet,12,Academic,Text,99,8
+373,18-24,Student,Khan Academy,Mobile,20,Skill Upgrade,Mixed,30,4
+374,25-34,Freelancer,edX,Tablet,18,Career Growth,Mixed,37,9
+375,Under 18,Student,Skillshare,Desktop,17,Academic,Video,99,10
+376,25-34,Student,Coursera,Desktop,19,Career Growth,Video,71,6
+377,35-44,Student,Skillshare,Laptop,9,Academic,Mixed,42,1
+378,18-24,Working Professional,Khan Academy,Tablet,4,Hobby,Text,94,3
+379,18-24,Working Professional,Coursera,Tablet,2,Skill Upgrade,Video,44,3
+380,45+,Freelancer,Skillshare,Mobile,4,Career Growth,Video,61,10
+381,18-24,Student,edX,Laptop,2,Academic,Text,43,4
+382,45+,Student,edX,Tablet,15,Career Growth,Video,50,6
+383,Under 18,Working Professional,Udemy,Laptop,2,Career Growth,Text,60,7
+384,35-44,Student,Skillshare,Desktop,4,Skill Upgrade,Text,56,10
+385,45+,Working Professional,YouTube,Tablet,6,Hobby,Text,91,4
+386,Under 18,Student,Skillshare,Tablet,7,Career Growth,Mixed,67,6
+387,18-24,Freelancer,Coursera,Laptop,10,Academic,Mixed,84,1
+388,18-24,Student,Coursera,Tablet,19,Academic,Mixed,66,8
+389,Under 18,Student,Skillshare,Laptop,19,Hobby,Text,32,7
+390,18-24,Other,Khan Academy,Tablet,12,Academic,Text,57,9
+391,Under 18,Working Professional,edX,Mobile,3,Hobby,Mixed,31,3
+392,45+,Student,Coursera,Laptop,13,Academic,Video,26,2
+393,45+,Student,edX,Tablet,18,Skill Upgrade,Text,78,1
+394,Under 18,Other,Coursera,Desktop,8,Career Growth,Video,20,3
+395,45+,Other,Udemy,Tablet,15,Skill Upgrade,Video,24,5
+396,45+,Working Professional,YouTube,Desktop,1,Career Growth,Text,100,2
+397,45+,Other,Coursera,Desktop,3,Career Growth,Text,44,3
+398,25-34,Freelancer,edX,Mobile,8,Career Growth,Video,42,4
+399,35-44,Other,Udemy,Laptop,4,Skill Upgrade,Video,93,7
+400,18-24,Freelancer,Coursera,Tablet,16,Career Growth,Mixed,25,3
+401,25-34,Working Professional,Khan Academy,Mobile,10,Skill Upgrade,Mixed,43,9
+402,45+,Working Professional,YouTube,Tablet,12,Hobby,Text,75,8
+403,Under 18,Working Professional,Coursera,Desktop,14,Academic,Mixed,49,4
+404,45+,Working Professional,Udemy,Laptop,14,Academic,Mixed,37,1
+405,35-44,Working Professional,Khan Academy,Tablet,2,Career Growth,Mixed,56,1
+406,45+,Freelancer,Skillshare,Tablet,5,Skill Upgrade,Mixed,48,1
+407,Under 18,Freelancer,Udemy,Desktop,5,Academic,Video,79,1
+408,35-44,Working Professional,Udemy,Tablet,6,Skill Upgrade,Text,82,8
+409,45+,Other,Khan Academy,Tablet,13,Skill Upgrade,Mixed,29,3
+410,35-44,Student,Udemy,Desktop,9,Career Growth,Video,10,6
+411,18-24,Working Professional,Khan Academy,Mobile,15,Academic,Video,81,3
+412,18-24,Other,Coursera,Desktop,14,Career Growth,Video,96,5
+413,45+,Student,Khan Academy,Mobile,7,Career Growth,Mixed,72,7
+414,35-44,Working Professional,Khan Academy,Laptop,20,Academic,Mixed,76,2
+415,Under 18,Working Professional,YouTube,Mobile,2,Academic,Text,13,6
+416,45+,Freelancer,Khan Academy,Mobile,7,Hobby,Mixed,67,6
+417,18-24,Student,Khan Academy,Laptop,6,Hobby,Mixed,34,3
+418,18-24,Student,Skillshare,Mobile,17,Skill Upgrade,Video,56,6
+419,45+,Other,Coursera,Desktop,2,Academic,Text,47,10
+420,35-44,Freelancer,YouTube,Mobile,3,Hobby,Mixed,24,10

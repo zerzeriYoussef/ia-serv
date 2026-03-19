@@ -36,7 +36,9 @@ class Dataset(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     
     # User reference (add later when auth is implemented)
-    # user_id = Column(Integer, ForeignKey("users.id"))
+    # Stored as the JWT `sub` claim (which is a UUID in your auth service).
+    # IA-service uses a separate DB, so we store it as a string instead of a real FK.
+    user_id = Column(String, nullable=True, index=True)
     
     def __repr__(self):
         return f"<Dataset {self.id}: {self.original_filename}>"

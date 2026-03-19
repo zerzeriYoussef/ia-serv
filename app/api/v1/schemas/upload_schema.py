@@ -18,6 +18,7 @@ class DatasetUploadResponse(BaseModel):
     file_size: int
     file_type: str
     status: DatasetStatus
+    user_id: Optional[str] = None
     created_at: datetime
     
     class Config:
@@ -32,6 +33,7 @@ class DatasetDetailResponse(BaseModel):
     file_size: int
     file_type: str
     status: DatasetStatus
+    user_id: Optional[str] = None
     row_count: Optional[int] = None
     column_count: Optional[int] = None
     columns: Optional[List[str]] = None

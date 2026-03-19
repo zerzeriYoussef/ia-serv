@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = "development"
     DEBUG: bool = True
     HOST: str = "0.0.0.0"
-    PORT: int = 8000
+    PORT: int = 8001
     
     # Database
     DATABASE_URL: str = "postgresql+asyncpg://postgres:admin@localhost:5432/ai_service"
