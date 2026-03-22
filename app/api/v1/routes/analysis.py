@@ -16,12 +16,57 @@ from app.repositories.dataset_repository import DatasetRepository
 from app.api.v1.schemas.analysis_schema import (
     AnalysisResultSchema,
     SimpleRelationshipResponse,
-    AnalysisRequest
+    AnalysisRequest,
+    StatisticalAnalyticsRequest,
+    StatisticalAnalyticsResponseSchema,
+)
+from app.services.analysis.statistical_relationship_service import (
+    run_multi_dataset_analytics,
 )
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+@router.post(
+    "/analysis/statistical-relationships",
+    response_model=StatisticalAnalyticsResponseSchema,
+    summary="Statistical relationships for one or more datasets",
+)
+async def statistical_relationships_analytics(
+    body: StatisticalAnalyticsRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Run analytics similar to the Spearman / Kruskal-Wallis+η² / Chi-square+Cramér's V script:
+
+    - For each dataset: detect numeric↔numeric, categorical→numeric, categorical↔categorical
+      relationships with multiple-testing-aware alpha and junk-column filtering.
+    - If several datasets are provided: attempt sequential **outer** merge on **all**
+      common column names, then run the same detection on the merged table.
+    """
+    seen: set[int] = set()
+    ordered_ids: List[int] = []
+    for raw_id in body.dataset_ids:
+        if raw_id not in seen:
+            seen.add(raw_id)
+            ordered_ids.append(raw_id)
+
+    loaded: List[tuple[int, str, Any]] = []
+    for dataset_id in ordered_ids:
+        dataset = await DatasetRepository.get_by_id(db, dataset_id)
+        if not dataset:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Dataset {dataset_id} not found",
+            )
+        df, _ = await ParserService.parse_file(dataset.file_path, dataset.file_type)
+        label = dataset.original_filename or f"dataset_{dataset_id}"
+        loaded.append((dataset_id, label, df))
+
+    result = run_multi_dataset_analytics(loaded)
+    return result
 
 
 def _normalize_relationships(relationships: List[Dict[str, Any]]) -> List[Dict[str, Any]]:

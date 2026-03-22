@@ -1,0 +1,26 @@
+employee_id,first_name,last_name,email,department_id,hire_date,salary,job_title,manager_id,performance_rating
+EMP001,John,Smith,john.smith@company.com,D1002,2018-06-15,95000,Senior Engineer,EMP012,4
+EMP002,Maria,Garcia,maria.garcia@company.com,D1003,2019-03-22,65000,Marketing Specialist,EMP008,3
+EMP003,David,Johnson,david.johnson@company.com,D1004,2015-11-02,75000,HR Director,NULL,5
+EMP004,Sarah,Williams,sarah.williams@company.com,D1001,2020-01-10,55000,Sales Rep,EMP005,3
+EMP005,Michael,Brown,michael.brown@company.com,D1001,2017-08-19,85000,Sales Manager,NULL,4
+EMP006,Emily,Davis,emily.davis@company.com,D1002,2021-02-28,78000,Software Engineer,EMP012,4
+EMP007,James,Miller,james.miller@company.com,D1005,2016-04-05,82000,Financial Analyst,EMP015,4
+EMP008,Linda,Wilson,linda.wilson@company.com,D1003,2014-09-12,72000,Marketing Manager,NULL,5
+EMP009,Robert,Moore,robert.moore@company.com,D1006,2022-07-18,58000,IT Support,EMP021,3
+EMP010,Patricia,Taylor,patricia.taylor@company.com,D1002,2019-11-25,92000,Lead Engineer,EMP012,5
+EMP011,Jennifer,Anderson,jennifer.anderson@company.com,D1007,2018-05-03,88000,Research Scientist,EMP018,4
+EMP012,William,Thomas,william.thomas@company.com,D1002,2013-10-30,130000,Engineering Director,NULL,5
+EMP005,Michael,Brown,michael.brown@company.com,D1001,2017-08-19,85000,Sales Manager,NULL,4
+EMP013,Elizabeth,Jackson,elizabeth.jackson@company.com,D1004,2020-12-14,62000,HR Generalist,EMP003,3
+EMP014,Charles,White,charles.white@company.com,D1005,2021-04-27,71000,Accountant,EMP015,3
+EMP015,Susan,Harris,susan.harris@company.com,D1005,2015-06-08,95000,Finance Director,NULL,5
+EMP016,Joseph,Martin,joseph.martin@company.com,D1002,2022-09-05,68000,Jr Developer,EMP012,3
+EMP017,Margaret,Thompson,margaret.thompson@company.com,D1007,2019-07-22,79000,Lab Technician,EMP018,4
+EMP018,Thomas,Garcia,thomas.garcia@company.com,D1007,2014-02-17,105000,Research Director,NULL,5
+EMP019,Christopher,Martinez,christopher.martinez@company.com,D1003,2020-10-09,59000,Marketing Coordinator,EMP008,3
+EMP020,Daniel,Robinson,daniel.robinson@company.com,D1006,2018-12-03,63000,IT Support,EMP021,4
+EMP021,Paul,Lewis,paul.lewis@company.com,D1006,2016-03-21,87000,IT Manager,NULL,4
+EMP022,Nancy,Lee,nancy.lee@company.com,D1002,2021-08-16,82000,DevOps Engineer,EMP012,4
+EMP023,Betty,Walker,betty.walker@company.com,D1004,2017-05-29,67000,HR Specialist,EMP003,3
+EMP024,Helen,Hall,helen.hall@company.com,D1001,2022-02-07,53000,Sales Trainee,EMP005,3

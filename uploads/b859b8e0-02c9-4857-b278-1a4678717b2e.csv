@@ -1,0 +1,8 @@
+department_id,department_name,manager_id,budget,location,established_date
+D1001,Sales,EMP005,500000,New York,2010-05-01
+D1002,Engineering,EMP012,1200000,San Francisco,2005-03-15
+D1003,Marketing,EMP008,450000,Chicago,2012-08-20
+D1004,Human Resources,EMP003,350000,Chicago,2008-11-10
+D1005,Finance,EMP015,600000,New York,2007-02-25
+D1006,IT Support,EMP021,400000,Remote,2015-07-01
+D1007,Research,EMP018,800000,San Francisco,2003-09-12
