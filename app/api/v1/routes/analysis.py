@@ -23,10 +23,40 @@ from app.api.v1.schemas.analysis_schema import (
 from app.services.analysis.statistical_relationship_service import (
     run_multi_dataset_analytics,
 )
+from app.services.analysis.kpi_service import build_kpi_block
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+async def _compute_dataset_kpi(
+    dataset_id: int,
+    primary_metric: str | None,
+    column_categories: Dict[str, Any],
+    db: AsyncSession,
+) -> Dict[str, Any] | None:
+    """
+    Recompute KPI from the source dataset file so responses include fresh KPI values.
+    """
+    if not primary_metric:
+        return None
+
+    dataset = await DatasetRepository.get_by_id(db, dataset_id)
+    if not dataset:
+        return None
+
+    try:
+        df, _ = await ParserService.parse_file(dataset.file_path, dataset.file_type)
+    except Exception:
+        return None
+
+    return build_kpi_block(
+        df=df,
+        primary_metric=primary_metric,
+        temporal_columns=column_categories.get("temporal", []),
+        dimension_columns=column_categories.get("dimensions", []),
+    )
 
 
 @router.post(
@@ -37,7 +67,7 @@ router = APIRouter()
 async def statistical_relationships_analytics(
     body: StatisticalAnalyticsRequest,
     db: AsyncSession = Depends(get_db),
-):
+):  
     """
     Run analytics similar to the Spearman / Kruskal-Wallis+η² / Chi-square+Cramér's V script:
 
@@ -129,19 +159,27 @@ async def analyze_dataset(
         existing = await AnalysisRepository.get_by_dataset(db, dataset_id)
         if existing:
             logger.info(f"Returning existing analysis for dataset {dataset_id}")
+            existing_categories = {
+                "metrics": existing.metrics,
+                "dimensions": existing.dimensions,
+                "identifiers": existing.identifiers,
+                "temporal": existing.temporal,
+                "geographic": existing.geographic,
+                "other": existing.other or [],
+            }
+            kpi = await _compute_dataset_kpi(
+                dataset_id=existing.dataset_id,
+                primary_metric=existing.primary_metric,
+                column_categories=existing_categories,
+                db=db,
+            )
             return {
                 "dataset_id": existing.dataset_id,
                 "relationships": _normalize_relationships(existing.relationships),
                 "dashboard_columns": existing.dashboard_columns,
-                "column_categories": {
-                    "metrics": existing.metrics,
-                    "dimensions": existing.dimensions,
-                    "identifiers": existing.identifiers,
-                    "temporal": existing.temporal,
-                    "geographic": existing.geographic,
-                    "other": existing.other or []
-                },
+                "column_categories": existing_categories,
                 "primary_metric": existing.primary_metric,
+                "kpi": kpi,
                 "confidence_score": existing.confidence_score,
                 "total_relationships": existing.total_relationships,
                 "created_at": existing.created_at
@@ -159,6 +197,12 @@ async def analyze_dataset(
     hierarchies = RelationshipDetector.detect_hierarchies(df)
     results["relationships"].extend(hierarchies)
     results["relationships"] = _normalize_relationships(results["relationships"])
+    kpi = build_kpi_block(
+        df=df,
+        primary_metric=results.get("primary_metric"),
+        temporal_columns=results.get("column_categories", {}).get("temporal", []),
+        dimension_columns=results.get("column_categories", {}).get("dimensions", []),
+    )
     
     # Save to database
     analysis = await AnalysisRepository.create(
@@ -188,6 +232,7 @@ async def analyze_dataset(
         "dashboard_columns": results["dashboard_columns"],
         "column_categories": results["column_categories"],
         "primary_metric": results["primary_metric"],
+        "kpi": kpi,
         "confidence_score": results["confidence_score"],
         "total_relationships": len(results["relationships"]),
         "created_at": analysis.created_at
@@ -209,19 +254,28 @@ async def get_analysis(
             detail=f"No analysis found for dataset {dataset_id}. Run POST /datasets/{dataset_id}/analyze first."
         )
     
+    column_categories = {
+        "metrics": analysis.metrics,
+        "dimensions": analysis.dimensions,
+        "identifiers": analysis.identifiers,
+        "temporal": analysis.temporal,
+        "geographic": analysis.geographic,
+        "other": analysis.other or []
+    }
+    kpi = await _compute_dataset_kpi(
+        dataset_id=analysis.dataset_id,
+        primary_metric=analysis.primary_metric,
+        column_categories=column_categories,
+        db=db,
+    )
+
     return {
         "dataset_id": analysis.dataset_id,
         "relationships": _normalize_relationships(analysis.relationships),
         "dashboard_columns": analysis.dashboard_columns,
-        "column_categories": {
-            "metrics": analysis.metrics,
-            "dimensions": analysis.dimensions,
-            "identifiers": analysis.identifiers,
-            "temporal": analysis.temporal,
-            "geographic": analysis.geographic,
-            "other": analysis.other or []
-        },
+        "column_categories": column_categories,
         "primary_metric": analysis.primary_metric,
+        "kpi": kpi,
         "confidence_score": analysis.confidence_score,
         "total_relationships": analysis.total_relationships,
         "created_at": analysis.created_at

@@ -38,8 +38,11 @@ class AnalysisRepository:
             select(ColumnAnalysis)
             .where(ColumnAnalysis.dataset_id == dataset_id)
             .order_by(ColumnAnalysis.created_at.desc())
+            .limit(1)
         )
-        return result.scalar_one_or_none()
+        # Use first() instead of scalar_one_or_none() because historical data
+        # may contain multiple rows for the same dataset.
+        return result.scalars().first()
     
     @staticmethod
     async def get_all(db: AsyncSession, skip: int = 0, limit: int = 100) -> List[ColumnAnalysis]:
