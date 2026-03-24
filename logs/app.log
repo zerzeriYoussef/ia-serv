@@ -3591,3 +3591,727 @@ WHERE datasets.id = $1::INTEGER
 2026-03-22 23:33:33 - sqlalchemy.engine.Engine - INFO - [cached since 0.1006s ago] (23,)
 2026-03-22 23:33:33 - app.services.data.parser_service - INFO - Parsed csv file: 20 rows, 6 columns
 2026-03-22 23:33:34 - sqlalchemy.engine.Engine - INFO - COMMIT
+2026-03-24 15:31:15 - root - INFO - Starting AI Data Analytics Service v1.0.0
+2026-03-24 15:31:15 - root - INFO - Environment: development
+2026-03-24 15:31:15 - sqlalchemy.engine.Engine - INFO - select pg_catalog.version()
+2026-03-24 15:31:15 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2026-03-24 15:31:15 - sqlalchemy.engine.Engine - INFO - select current_schema()
+2026-03-24 15:31:15 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2026-03-24 15:31:15 - sqlalchemy.engine.Engine - INFO - show standard_conforming_strings
+2026-03-24 15:31:15 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2026-03-24 15:31:15 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2026-03-24 15:31:15 - sqlalchemy.engine.Engine - INFO - SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2026-03-24 15:31:15 - sqlalchemy.engine.Engine - INFO - [generated in 0.00296s] ('datasets', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2026-03-24 15:31:15 - sqlalchemy.engine.Engine - INFO - SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2026-03-24 15:31:15 - sqlalchemy.engine.Engine - INFO - [cached since 0.1276s ago] ('column_analysis', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2026-03-24 15:31:15 - sqlalchemy.engine.Engine - INFO - SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2026-03-24 15:31:15 - sqlalchemy.engine.Engine - INFO - [cached since 0.1301s ago] ('cleaning_profiles', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2026-03-24 15:31:15 - sqlalchemy.engine.Engine - INFO - SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2026-03-24 15:31:15 - sqlalchemy.engine.Engine - INFO - [cached since 0.1325s ago] ('cleaning_logs', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2026-03-24 15:31:15 - sqlalchemy.engine.Engine - INFO - SELECT pg_catalog.pg_type.typname 
+FROM pg_catalog.pg_type JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_type.typnamespace 
+WHERE pg_catalog.pg_type.typname = $1::VARCHAR AND pg_catalog.pg_type_is_visible(pg_catalog.pg_type.oid) AND pg_catalog.pg_namespace.nspname != $2::VARCHAR
+2026-03-24 15:31:15 - sqlalchemy.engine.Engine - INFO - [generated in 0.00098s] ('datasetstatus', 'pg_catalog')
+2026-03-24 15:31:15 - sqlalchemy.engine.Engine - INFO - COMMIT
+2026-03-24 15:31:15 - app.core.database - INFO - Database initialized
+2026-03-24 15:31:15 - app.core.cache - INFO - Redis connected
+2026-03-24 15:36:42 - app.services.data.ingestion_service - INFO - File saved: 70f91894-4f95-4bf6-9697-21dd2c11615d.csv (635952 bytes)
+2026-03-24 15:36:42 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2026-03-24 15:36:42 - sqlalchemy.engine.Engine - INFO - INSERT INTO datasets (filename, original_filename, file_path, file_size, file_type, status, row_count, column_count, updated_at, user_id) VALUES ($1::VARCHAR, $2::VARCHAR, $3::VARCHAR, $4::BIGINT, $5::VARCHAR, $6::datasetstatus, $7::INTEGER, $8::INTEGER, $9::TIMESTAMP WITH TIME ZONE, $10::VARCHAR) RETURNING datasets.id, datasets.created_at
+2026-03-24 15:36:42 - sqlalchemy.engine.Engine - INFO - [generated in 0.00256s] ('70f91894-4f95-4bf6-9697-21dd2c11615d.csv', 'Bank_Churn.csv', 'uploads\\70f91894-4f95-4bf6-9697-21dd2c11615d.csv', 635952, 'csv', 'UPLOADED', None, None, None, 'a4c88ebc-fcab-4cb4-91a2-b8cdb1682fd9')
+2026-03-24 15:36:42 - sqlalchemy.engine.Engine - INFO - SELECT datasets.id, datasets.filename, datasets.original_filename, datasets.file_path, datasets.file_size, datasets.file_type, datasets.status, datasets.row_count, datasets.column_count, datasets.columns, datasets.column_types, datasets.summary_stats, datasets.created_at, datasets.updated_at, datasets.user_id 
+FROM datasets 
+WHERE datasets.id = $1::INTEGER
+2026-03-24 15:36:42 - sqlalchemy.engine.Engine - INFO - [generated in 0.00128s] (24,)
+2026-03-24 15:36:42 - app.repositories.dataset_repository - INFO - Created dataset: 24
+2026-03-24 15:36:42 - app.api.v1.routes.upload - INFO - File uploaded: Bank_Churn.csv -> Dataset ID: 24 (user_id=a4c88ebc-fcab-4cb4-91a2-b8cdb1682fd9)
+2026-03-24 15:36:42 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2026-03-24 15:36:42 - sqlalchemy.engine.Engine - INFO - UPDATE datasets SET status=$1::datasetstatus, updated_at=now() WHERE datasets.id = $2::INTEGER
+2026-03-24 15:36:42 - sqlalchemy.engine.Engine - INFO - [generated in 0.00060s] ('PROCESSING', 24)
+2026-03-24 15:36:42 - sqlalchemy.engine.Engine - INFO - COMMIT
+2026-03-24 15:36:42 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2026-03-24 15:36:42 - sqlalchemy.engine.Engine - INFO - SELECT datasets.id, datasets.filename, datasets.original_filename, datasets.file_path, datasets.file_size, datasets.file_type, datasets.status, datasets.row_count, datasets.column_count, datasets.columns, datasets.column_types, datasets.summary_stats, datasets.created_at, datasets.updated_at, datasets.user_id 
+FROM datasets 
+WHERE datasets.id = $1::INTEGER
+2026-03-24 15:36:42 - sqlalchemy.engine.Engine - INFO - [generated in 0.00287s] (24,)
+2026-03-24 15:36:42 - app.services.data.parser_service - INFO - Parsed csv file: 10000 rows, 13 columns
+2026-03-24 15:36:42 - sqlalchemy.engine.Engine - INFO - UPDATE datasets SET status=$1::datasetstatus, row_count=$2::INTEGER, column_count=$3::INTEGER, columns=$4::JSON, column_types=$5::JSON, summary_stats=$6::JSON, updated_at=now() WHERE datasets.id = $7::INTEGER
+2026-03-24 15:36:42 - sqlalchemy.engine.Engine - INFO - [generated in 0.00079s] ('PROCESSED', 10000, 13, '["CustomerId", "Surname", "CreditScore", "Geography", "Gender", "Age", "Tenure", "Balance", "NumOfProducts", "HasCrCard", "IsActiveMember", "EstimatedSalary", "Exited"]', '{"CustomerId": "int64", "Surname": "object", "CreditScore": "int64", "Geography": "object", "Gender": "object", "Age": "int64", "Tenure": "int64", "Balance": "float64", "NumOfProducts": "int64", "HasCrCard": "int64", "IsActiveMember": "int64", "EstimatedSalary": "float64", "Exited": "int64"}', '{"CustomerId": {"count": 10000.0, "mean": 15690940.5694, "std": 71936.1861227489, "min": 15565701.0, "25%": 15628528.25, "50%": 15690738.0, "75%": 15 ... (1193 characters truncated) ... x": 199992.48}, "Exited": {"count": 10000.0, "mean": 0.2037, "std": 0.40276858399486093, "min": 0.0, "25%": 0.0, "50%": 0.0, "75%": 0.0, "max": 1.0}}', 24)
+2026-03-24 15:36:42 - sqlalchemy.engine.Engine - INFO - COMMIT
+2026-03-24 15:36:42 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2026-03-24 15:36:42 - sqlalchemy.engine.Engine - INFO - SELECT datasets.id, datasets.filename, datasets.original_filename, datasets.file_path, datasets.file_size, datasets.file_type, datasets.status, datasets.row_count, datasets.column_count, datasets.columns, datasets.column_types, datasets.summary_stats, datasets.created_at, datasets.updated_at, datasets.user_id 
+FROM datasets 
+WHERE datasets.id = $1::INTEGER
+2026-03-24 15:36:42 - sqlalchemy.engine.Engine - INFO - [cached since 0.1687s ago] (24,)
+2026-03-24 15:36:42 - sqlalchemy.engine.Engine - INFO - COMMIT
+2026-03-24 15:36:42 - app.api.v1.routes.upload - INFO - Dataset 24 processed successfully
+2026-03-24 15:36:42 - app.api.v1.routes.upload - INFO - Starting auto-analysis for dataset 24...
+2026-03-24 15:36:42 - app.services.analysis.column_analyzer - INFO - Analyzing 13 columns from 10000 rows...
+2026-03-24 15:36:42 - app.services.analysis.column_analyzer - INFO - Detecting relationships with CustomPPS...
+2026-03-24 15:36:42 - app.services.analysis.custom_pps - INFO - Sampled 5000 rows from 10000 for PPS analysis
+2026-03-24 15:36:47 - app.services.analysis.column_analyzer - INFO - Found 0 PPS relationships
+2026-03-24 15:36:47 - app.services.analysis.column_analyzer - INFO - Found 0 correlations
+2026-03-24 15:36:47 - app.services.analysis.column_analyzer - INFO - Analysis complete: 0 relationships found
+2026-03-24 15:36:47 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2026-03-24 15:36:47 - sqlalchemy.engine.Engine - INFO - INSERT INTO column_analysis (dataset_id, metrics, dimensions, identifiers, temporal, geographic, other, relationships, dashboard_columns, primary_metric, analysis_method, confidence_score, total_relationships, updated_at) VALUES ($1::INTEGER, $2::JSON, $3::JSON, $4::JSON, $5::JSON, $6::JSON, $7::JSON, $8::JSON, $9::JSON, $10::VARCHAR, $11::VARCHAR, $12::FLOAT, $13::INTEGER, $14::TIMESTAMP WITH TIME ZONE) RETURNING column_analysis.id, column_analysis.created_at
+2026-03-24 15:36:47 - sqlalchemy.engine.Engine - INFO - [generated in 0.00142s] (24, '[]', '["Gender"]', '["CustomerId"]', '["CreditScore", "Age", "Tenure", "Balance", "NumOfProducts", "HasCrCard", "IsActiveMember", "EstimatedSalary", "Exited"]', '["Geography"]', '["Surname"]', '[]', '["Gender", "CreditScore", "Geography"]', None, 'custom_pps', 0.5, 0, None)
+2026-03-24 15:36:47 - sqlalchemy.engine.Engine - INFO - ROLLBACK
+2026-03-24 15:36:47 - app.api.v1.routes.upload - ERROR - Auto-analysis failed for dataset 24: (sqlalchemy.dialects.postgresql.asyncpg.IntegrityError) <class 'asyncpg.exceptions.ForeignKeyViolationError'>: une instruction insert ou update sur la table « column_analysis » viole la contrainte de clé
+étrangère « column_analysis_dataset_id_fkey »
+DETAIL:  La clé (dataset_id)=(24) n'est pas présente dans la table « datasets ».
+[SQL: INSERT INTO column_analysis (dataset_id, metrics, dimensions, identifiers, temporal, geographic, other, relationships, dashboard_columns, primary_metric, analysis_method, confidence_score, total_relationships, updated_at) VALUES ($1::INTEGER, $2::JSON, $3::JSON, $4::JSON, $5::JSON, $6::JSON, $7::JSON, $8::JSON, $9::JSON, $10::VARCHAR, $11::VARCHAR, $12::FLOAT, $13::INTEGER, $14::TIMESTAMP WITH TIME ZONE) RETURNING column_analysis.id, column_analysis.created_at]
+[parameters: (24, '[]', '["Gender"]', '["CustomerId"]', '["CreditScore", "Age", "Tenure", "Balance", "NumOfProducts", "HasCrCard", "IsActiveMember", "EstimatedSalary", "Exited"]', '["Geography"]', '["Surname"]', '[]', '["Gender", "CreditScore", "Geography"]', None, 'custom_pps', 0.5, 0, None)]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2026-03-24 15:36:47 - sqlalchemy.engine.Engine - INFO - COMMIT
+2026-03-24 15:37:10 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2026-03-24 15:37:10 - sqlalchemy.engine.Engine - INFO - SELECT datasets.id, datasets.filename, datasets.original_filename, datasets.file_path, datasets.file_size, datasets.file_type, datasets.status, datasets.row_count, datasets.column_count, datasets.columns, datasets.column_types, datasets.summary_stats, datasets.created_at, datasets.updated_at, datasets.user_id 
+FROM datasets 
+WHERE datasets.id = $1::INTEGER
+2026-03-24 15:37:10 - sqlalchemy.engine.Engine - INFO - [cached since 27.9s ago] (1,)
+2026-03-24 15:37:10 - sqlalchemy.engine.Engine - INFO - SELECT column_analysis.id, column_analysis.dataset_id, column_analysis.metrics, column_analysis.dimensions, column_analysis.identifiers, column_analysis.temporal, column_analysis.geographic, column_analysis.other, column_analysis.relationships, column_analysis.dashboard_columns, column_analysis.primary_metric, column_analysis.analysis_method, column_analysis.confidence_score, column_analysis.total_relationships, column_analysis.created_at, column_analysis.updated_at 
+FROM column_analysis 
+WHERE column_analysis.dataset_id = $1::INTEGER ORDER BY column_analysis.created_at DESC
+2026-03-24 15:37:10 - sqlalchemy.engine.Engine - INFO - [generated in 0.01754s] (1,)
+2026-03-24 15:37:10 - app.api.v1.routes.analysis - INFO - Returning existing analysis for dataset 1
+2026-03-24 15:37:10 - sqlalchemy.engine.Engine - INFO - COMMIT
+2026-03-24 15:37:18 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2026-03-24 15:37:18 - sqlalchemy.engine.Engine - INFO - SELECT datasets.id, datasets.filename, datasets.original_filename, datasets.file_path, datasets.file_size, datasets.file_type, datasets.status, datasets.row_count, datasets.column_count, datasets.columns, datasets.column_types, datasets.summary_stats, datasets.created_at, datasets.updated_at, datasets.user_id 
+FROM datasets 
+WHERE datasets.id = $1::INTEGER
+2026-03-24 15:37:18 - sqlalchemy.engine.Engine - INFO - [cached since 36.43s ago] (24,)
+2026-03-24 15:37:18 - sqlalchemy.engine.Engine - INFO - SELECT column_analysis.id, column_analysis.dataset_id, column_analysis.metrics, column_analysis.dimensions, column_analysis.identifiers, column_analysis.temporal, column_analysis.geographic, column_analysis.other, column_analysis.relationships, column_analysis.dashboard_columns, column_analysis.primary_metric, column_analysis.analysis_method, column_analysis.confidence_score, column_analysis.total_relationships, column_analysis.created_at, column_analysis.updated_at 
+FROM column_analysis 
+WHERE column_analysis.dataset_id = $1::INTEGER ORDER BY column_analysis.created_at DESC
+2026-03-24 15:37:18 - sqlalchemy.engine.Engine - INFO - [cached since 8.536s ago] (24,)
+2026-03-24 15:37:18 - app.api.v1.routes.analysis - INFO - Loading dataset 24 for analysis...
+2026-03-24 15:37:18 - app.services.data.parser_service - INFO - Parsed csv file: 10000 rows, 13 columns
+2026-03-24 15:37:19 - app.services.analysis.column_analyzer - INFO - Analyzing 13 columns from 10000 rows...
+2026-03-24 15:37:19 - app.services.analysis.column_analyzer - INFO - Detecting relationships with CustomPPS...
+2026-03-24 15:37:19 - app.services.analysis.custom_pps - INFO - Sampled 5000 rows from 10000 for PPS analysis
+2026-03-24 15:37:24 - app.services.analysis.column_analyzer - INFO - Found 0 PPS relationships
+2026-03-24 15:37:24 - app.services.analysis.column_analyzer - INFO - Found 0 correlations
+2026-03-24 15:37:24 - app.services.analysis.column_analyzer - INFO - Analysis complete: 0 relationships found
+2026-03-24 15:37:24 - sqlalchemy.engine.Engine - INFO - INSERT INTO column_analysis (dataset_id, metrics, dimensions, identifiers, temporal, geographic, other, relationships, dashboard_columns, primary_metric, analysis_method, confidence_score, total_relationships, updated_at) VALUES ($1::INTEGER, $2::JSON, $3::JSON, $4::JSON, $5::JSON, $6::JSON, $7::JSON, $8::JSON, $9::JSON, $10::VARCHAR, $11::VARCHAR, $12::FLOAT, $13::INTEGER, $14::TIMESTAMP WITH TIME ZONE) RETURNING column_analysis.id, column_analysis.created_at
+2026-03-24 15:37:24 - sqlalchemy.engine.Engine - INFO - [generated in 0.00154s] (24, '[]', '["Gender"]', '["CustomerId"]', '["CreditScore", "Age", "Tenure", "Balance", "NumOfProducts", "HasCrCard", "IsActiveMember", "EstimatedSalary", "Exited"]', '["Geography"]', '["Surname"]', '[]', '["Gender", "CreditScore", "Geography"]', None, 'custom_pps', 0.5, 0, None)
+2026-03-24 15:37:24 - sqlalchemy.engine.Engine - INFO - SELECT column_analysis.id, column_analysis.dataset_id, column_analysis.metrics, column_analysis.dimensions, column_analysis.identifiers, column_analysis.temporal, column_analysis.geographic, column_analysis.other, column_analysis.relationships, column_analysis.dashboard_columns, column_analysis.primary_metric, column_analysis.analysis_method, column_analysis.confidence_score, column_analysis.total_relationships, column_analysis.created_at, column_analysis.updated_at 
+FROM column_analysis 
+WHERE column_analysis.id = $1::INTEGER
+2026-03-24 15:37:24 - sqlalchemy.engine.Engine - INFO - [generated in 0.00148s] (46,)
+2026-03-24 15:37:24 - app.repositories.analysis_repository - INFO - Created analysis 46 for dataset 24
+2026-03-24 15:37:24 - sqlalchemy.engine.Engine - INFO - COMMIT
+2026-03-24 15:37:24 - app.api.v1.routes.analysis - INFO - Analysis saved for dataset 24: 0 relationships
+2026-03-24 15:38:03 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2026-03-24 15:38:03 - sqlalchemy.engine.Engine - INFO - SELECT datasets.id, datasets.filename, datasets.original_filename, datasets.file_path, datasets.file_size, datasets.file_type, datasets.status, datasets.row_count, datasets.column_count, datasets.columns, datasets.column_types, datasets.summary_stats, datasets.created_at, datasets.updated_at, datasets.user_id 
+FROM datasets 
+WHERE datasets.id = $1::INTEGER
+2026-03-24 15:38:03 - sqlalchemy.engine.Engine - INFO - [cached since 81.42s ago] (24,)
+2026-03-24 15:38:03 - app.services.data.parser_service - INFO - Parsed csv file: 10000 rows, 13 columns
+2026-03-24 15:38:04 - sqlalchemy.engine.Engine - INFO - COMMIT
+2026-03-24 15:49:08 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2026-03-24 15:49:08 - sqlalchemy.engine.Engine - INFO - SELECT datasets.id, datasets.filename, datasets.original_filename, datasets.file_path, datasets.file_size, datasets.file_type, datasets.status, datasets.row_count, datasets.column_count, datasets.columns, datasets.column_types, datasets.summary_stats, datasets.created_at, datasets.updated_at, datasets.user_id 
+FROM datasets 
+WHERE datasets.id = $1::INTEGER
+2026-03-24 15:49:08 - sqlalchemy.engine.Engine - INFO - [cached since 745.5s ago] (1,)
+2026-03-24 15:49:08 - sqlalchemy.engine.Engine - INFO - SELECT column_analysis.id, column_analysis.dataset_id, column_analysis.metrics, column_analysis.dimensions, column_analysis.identifiers, column_analysis.temporal, column_analysis.geographic, column_analysis.other, column_analysis.relationships, column_analysis.dashboard_columns, column_analysis.primary_metric, column_analysis.analysis_method, column_analysis.confidence_score, column_analysis.total_relationships, column_analysis.created_at, column_analysis.updated_at 
+FROM column_analysis 
+WHERE column_analysis.dataset_id = $1::INTEGER ORDER BY column_analysis.created_at DESC
+2026-03-24 15:49:08 - sqlalchemy.engine.Engine - INFO - [cached since 717.6s ago] (1,)
+2026-03-24 15:49:08 - app.api.v1.routes.analysis - INFO - Returning existing analysis for dataset 1
+2026-03-24 15:49:08 - sqlalchemy.engine.Engine - INFO - COMMIT
+2026-03-24 17:12:42 - root - INFO - Shutting down...
+2026-03-24 17:12:43 - app.core.database - INFO - Database connection closed
+2026-03-24 17:12:43 - app.core.cache - INFO - Redis connection closed
+2026-03-24 17:47:29 - root - INFO - Starting AI Data Analytics Service v1.0.0
+2026-03-24 17:47:29 - root - INFO - Environment: development
+2026-03-24 17:47:29 - sqlalchemy.engine.Engine - INFO - select pg_catalog.version()
+2026-03-24 17:47:29 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2026-03-24 17:47:29 - sqlalchemy.engine.Engine - INFO - select current_schema()
+2026-03-24 17:47:29 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2026-03-24 17:47:29 - sqlalchemy.engine.Engine - INFO - show standard_conforming_strings
+2026-03-24 17:47:29 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2026-03-24 17:47:29 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2026-03-24 17:47:29 - sqlalchemy.engine.Engine - INFO - SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2026-03-24 17:47:29 - sqlalchemy.engine.Engine - INFO - [generated in 0.02746s] ('datasets', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2026-03-24 17:47:29 - sqlalchemy.engine.Engine - INFO - SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2026-03-24 17:47:30 - sqlalchemy.engine.Engine - INFO - [cached since 0.07187s ago] ('column_analysis', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2026-03-24 17:47:30 - sqlalchemy.engine.Engine - INFO - SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2026-03-24 17:47:30 - sqlalchemy.engine.Engine - INFO - [cached since 0.101s ago] ('cleaning_profiles', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2026-03-24 17:47:30 - sqlalchemy.engine.Engine - INFO - SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2026-03-24 17:47:30 - sqlalchemy.engine.Engine - INFO - [cached since 0.1319s ago] ('cleaning_logs', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2026-03-24 17:47:30 - sqlalchemy.engine.Engine - INFO - SELECT pg_catalog.pg_type.typname 
+FROM pg_catalog.pg_type JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_type.typnamespace 
+WHERE pg_catalog.pg_type.typname = $1::VARCHAR AND pg_catalog.pg_type_is_visible(pg_catalog.pg_type.oid) AND pg_catalog.pg_namespace.nspname != $2::VARCHAR
+2026-03-24 17:47:30 - sqlalchemy.engine.Engine - INFO - [generated in 0.00448s] ('datasetstatus', 'pg_catalog')
+2026-03-24 17:47:30 - sqlalchemy.engine.Engine - INFO - COMMIT
+2026-03-24 17:47:30 - app.core.database - INFO - Database initialized
+2026-03-24 17:47:30 - app.core.cache - INFO - Redis connected
+2026-03-24 17:50:20 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2026-03-24 17:50:20 - sqlalchemy.engine.Engine - INFO - SELECT datasets.id, datasets.filename, datasets.original_filename, datasets.file_path, datasets.file_size, datasets.file_type, datasets.status, datasets.row_count, datasets.column_count, datasets.columns, datasets.column_types, datasets.summary_stats, datasets.created_at, datasets.updated_at, datasets.user_id 
+FROM datasets 
+WHERE datasets.id = $1::INTEGER
+2026-03-24 17:50:20 - sqlalchemy.engine.Engine - INFO - [generated in 0.00315s] (1,)
+2026-03-24 17:50:20 - sqlalchemy.engine.Engine - INFO - SELECT column_analysis.id, column_analysis.dataset_id, column_analysis.metrics, column_analysis.dimensions, column_analysis.identifiers, column_analysis.temporal, column_analysis.geographic, column_analysis.other, column_analysis.relationships, column_analysis.dashboard_columns, column_analysis.primary_metric, column_analysis.analysis_method, column_analysis.confidence_score, column_analysis.total_relationships, column_analysis.created_at, column_analysis.updated_at 
+FROM column_analysis 
+WHERE column_analysis.dataset_id = $1::INTEGER ORDER BY column_analysis.created_at DESC
+2026-03-24 17:50:20 - sqlalchemy.engine.Engine - INFO - [generated in 0.00126s] (1,)
+2026-03-24 17:50:20 - app.api.v1.routes.analysis - INFO - Returning existing analysis for dataset 1
+2026-03-24 17:50:20 - sqlalchemy.engine.Engine - INFO - COMMIT
+2026-03-24 17:51:29 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2026-03-24 17:51:29 - sqlalchemy.engine.Engine - INFO - SELECT datasets.id, datasets.filename, datasets.original_filename, datasets.file_path, datasets.file_size, datasets.file_type, datasets.status, datasets.row_count, datasets.column_count, datasets.columns, datasets.column_types, datasets.summary_stats, datasets.created_at, datasets.updated_at, datasets.user_id 
+FROM datasets 
+WHERE datasets.id = $1::INTEGER
+2026-03-24 17:51:29 - sqlalchemy.engine.Engine - INFO - [cached since 68.89s ago] (7,)
+2026-03-24 17:51:29 - sqlalchemy.engine.Engine - INFO - SELECT column_analysis.id, column_analysis.dataset_id, column_analysis.metrics, column_analysis.dimensions, column_analysis.identifiers, column_analysis.temporal, column_analysis.geographic, column_analysis.other, column_analysis.relationships, column_analysis.dashboard_columns, column_analysis.primary_metric, column_analysis.analysis_method, column_analysis.confidence_score, column_analysis.total_relationships, column_analysis.created_at, column_analysis.updated_at 
+FROM column_analysis 
+WHERE column_analysis.dataset_id = $1::INTEGER ORDER BY column_analysis.created_at DESC
+2026-03-24 17:51:29 - sqlalchemy.engine.Engine - INFO - [cached since 68.83s ago] (7,)
+2026-03-24 17:51:29 - app.api.v1.routes.analysis - INFO - Returning existing analysis for dataset 7
+2026-03-24 17:51:29 - sqlalchemy.engine.Engine - INFO - COMMIT
+2026-03-24 17:51:54 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2026-03-24 17:51:54 - sqlalchemy.engine.Engine - INFO - SELECT datasets.id, datasets.filename, datasets.original_filename, datasets.file_path, datasets.file_size, datasets.file_type, datasets.status, datasets.row_count, datasets.column_count, datasets.columns, datasets.column_types, datasets.summary_stats, datasets.created_at, datasets.updated_at, datasets.user_id 
+FROM datasets 
+WHERE datasets.id = $1::INTEGER
+2026-03-24 17:51:54 - sqlalchemy.engine.Engine - INFO - [cached since 94.82s ago] (20,)
+2026-03-24 17:51:54 - sqlalchemy.engine.Engine - INFO - SELECT column_analysis.id, column_analysis.dataset_id, column_analysis.metrics, column_analysis.dimensions, column_analysis.identifiers, column_analysis.temporal, column_analysis.geographic, column_analysis.other, column_analysis.relationships, column_analysis.dashboard_columns, column_analysis.primary_metric, column_analysis.analysis_method, column_analysis.confidence_score, column_analysis.total_relationships, column_analysis.created_at, column_analysis.updated_at 
+FROM column_analysis 
+WHERE column_analysis.dataset_id = $1::INTEGER ORDER BY column_analysis.created_at DESC
+2026-03-24 17:51:54 - sqlalchemy.engine.Engine - INFO - [cached since 94.76s ago] (20,)
+2026-03-24 17:51:54 - sqlalchemy.engine.Engine - INFO - ROLLBACK
+2026-03-24 17:51:54 - app.core.database - ERROR - Database error: Multiple rows were found when one or none was required
+2026-03-24 17:52:04 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2026-03-24 17:52:04 - sqlalchemy.engine.Engine - INFO - SELECT datasets.id, datasets.filename, datasets.original_filename, datasets.file_path, datasets.file_size, datasets.file_type, datasets.status, datasets.row_count, datasets.column_count, datasets.columns, datasets.column_types, datasets.summary_stats, datasets.created_at, datasets.updated_at, datasets.user_id 
+FROM datasets 
+WHERE datasets.id = $1::INTEGER
+2026-03-24 17:52:04 - sqlalchemy.engine.Engine - INFO - [cached since 104.2s ago] (4,)
+2026-03-24 17:52:04 - sqlalchemy.engine.Engine - INFO - SELECT column_analysis.id, column_analysis.dataset_id, column_analysis.metrics, column_analysis.dimensions, column_analysis.identifiers, column_analysis.temporal, column_analysis.geographic, column_analysis.other, column_analysis.relationships, column_analysis.dashboard_columns, column_analysis.primary_metric, column_analysis.analysis_method, column_analysis.confidence_score, column_analysis.total_relationships, column_analysis.created_at, column_analysis.updated_at 
+FROM column_analysis 
+WHERE column_analysis.dataset_id = $1::INTEGER ORDER BY column_analysis.created_at DESC
+2026-03-24 17:52:04 - sqlalchemy.engine.Engine - INFO - [cached since 104.1s ago] (4,)
+2026-03-24 17:52:04 - app.api.v1.routes.analysis - INFO - Returning existing analysis for dataset 4
+2026-03-24 17:52:04 - sqlalchemy.engine.Engine - INFO - SELECT datasets.id, datasets.filename, datasets.original_filename, datasets.file_path, datasets.file_size, datasets.file_type, datasets.status, datasets.row_count, datasets.column_count, datasets.columns, datasets.column_types, datasets.summary_stats, datasets.created_at, datasets.updated_at, datasets.user_id 
+FROM datasets 
+WHERE datasets.id = $1::INTEGER
+2026-03-24 17:52:04 - sqlalchemy.engine.Engine - INFO - [cached since 104.2s ago] (4,)
+2026-03-24 17:52:04 - app.services.data.parser_service - INFO - Parsed csv file: 1274 rows, 13 columns
+2026-03-24 17:52:04 - sqlalchemy.engine.Engine - INFO - COMMIT
+2026-03-24 17:58:34 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2026-03-24 17:58:34 - sqlalchemy.engine.Engine - INFO - SELECT datasets.id, datasets.filename, datasets.original_filename, datasets.file_path, datasets.file_size, datasets.file_type, datasets.status, datasets.row_count, datasets.column_count, datasets.columns, datasets.column_types, datasets.summary_stats, datasets.created_at, datasets.updated_at, datasets.user_id 
+FROM datasets 
+WHERE datasets.id = $1::INTEGER
+2026-03-24 17:58:34 - sqlalchemy.engine.Engine - INFO - [cached since 493.9s ago] (8,)
+2026-03-24 17:58:34 - sqlalchemy.engine.Engine - INFO - SELECT column_analysis.id, column_analysis.dataset_id, column_analysis.metrics, column_analysis.dimensions, column_analysis.identifiers, column_analysis.temporal, column_analysis.geographic, column_analysis.other, column_analysis.relationships, column_analysis.dashboard_columns, column_analysis.primary_metric, column_analysis.analysis_method, column_analysis.confidence_score, column_analysis.total_relationships, column_analysis.created_at, column_analysis.updated_at 
+FROM column_analysis 
+WHERE column_analysis.dataset_id = $1::INTEGER ORDER BY column_analysis.created_at DESC
+2026-03-24 17:58:34 - sqlalchemy.engine.Engine - INFO - [cached since 493.8s ago] (8,)
+2026-03-24 17:58:34 - app.api.v1.routes.analysis - INFO - Returning existing analysis for dataset 8
+2026-03-24 17:58:34 - sqlalchemy.engine.Engine - INFO - COMMIT
+2026-03-24 17:58:46 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2026-03-24 17:58:46 - sqlalchemy.engine.Engine - INFO - SELECT datasets.id, datasets.filename, datasets.original_filename, datasets.file_path, datasets.file_size, datasets.file_type, datasets.status, datasets.row_count, datasets.column_count, datasets.columns, datasets.column_types, datasets.summary_stats, datasets.created_at, datasets.updated_at, datasets.user_id 
+FROM datasets 
+WHERE datasets.id = $1::INTEGER
+2026-03-24 17:58:46 - sqlalchemy.engine.Engine - INFO - [cached since 506s ago] (11,)
+2026-03-24 17:58:46 - sqlalchemy.engine.Engine - INFO - SELECT column_analysis.id, column_analysis.dataset_id, column_analysis.metrics, column_analysis.dimensions, column_analysis.identifiers, column_analysis.temporal, column_analysis.geographic, column_analysis.other, column_analysis.relationships, column_analysis.dashboard_columns, column_analysis.primary_metric, column_analysis.analysis_method, column_analysis.confidence_score, column_analysis.total_relationships, column_analysis.created_at, column_analysis.updated_at 
+FROM column_analysis 
+WHERE column_analysis.dataset_id = $1::INTEGER ORDER BY column_analysis.created_at DESC
+2026-03-24 17:58:46 - sqlalchemy.engine.Engine - INFO - [cached since 505.9s ago] (11,)
+2026-03-24 17:58:46 - app.api.v1.routes.analysis - INFO - Returning existing analysis for dataset 11
+2026-03-24 17:58:46 - sqlalchemy.engine.Engine - INFO - COMMIT
+2026-03-24 18:19:28 - app.services.data.ingestion_service - INFO - File saved: 09792702-b434-49df-a5a2-8c3ca938e82c.csv (4483 bytes)
+2026-03-24 18:19:28 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2026-03-24 18:19:29 - sqlalchemy.engine.Engine - INFO - INSERT INTO datasets (filename, original_filename, file_path, file_size, file_type, status, row_count, column_count, updated_at, user_id) VALUES ($1::VARCHAR, $2::VARCHAR, $3::VARCHAR, $4::BIGINT, $5::VARCHAR, $6::datasetstatus, $7::INTEGER, $8::INTEGER, $9::TIMESTAMP WITH TIME ZONE, $10::VARCHAR) RETURNING datasets.id, datasets.created_at
+2026-03-24 18:19:29 - sqlalchemy.engine.Engine - INFO - [generated in 0.05110s] ('09792702-b434-49df-a5a2-8c3ca938e82c.csv', 'laptop.csv', 'uploads\\09792702-b434-49df-a5a2-8c3ca938e82c.csv', 4483, 'csv', 'UPLOADED', None, None, None, 'a4c88ebc-fcab-4cb4-91a2-b8cdb1682fd9')
+2026-03-24 18:19:31 - sqlalchemy.engine.Engine - INFO - SELECT datasets.id, datasets.filename, datasets.original_filename, datasets.file_path, datasets.file_size, datasets.file_type, datasets.status, datasets.row_count, datasets.column_count, datasets.columns, datasets.column_types, datasets.summary_stats, datasets.created_at, datasets.updated_at, datasets.user_id 
+FROM datasets 
+WHERE datasets.id = $1::INTEGER
+2026-03-24 18:19:31 - sqlalchemy.engine.Engine - INFO - [generated in 0.02068s] (25,)
+2026-03-24 18:19:31 - app.repositories.dataset_repository - INFO - Created dataset: 25
+2026-03-24 18:19:31 - app.api.v1.routes.upload - INFO - File uploaded: laptop.csv -> Dataset ID: 25 (user_id=a4c88ebc-fcab-4cb4-91a2-b8cdb1682fd9)
+2026-03-24 18:19:33 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2026-03-24 18:19:33 - sqlalchemy.engine.Engine - INFO - UPDATE datasets SET status=$1::datasetstatus, updated_at=now() WHERE datasets.id = $2::INTEGER
+2026-03-24 18:19:33 - sqlalchemy.engine.Engine - INFO - [generated in 0.00552s] ('PROCESSING', 25)
+2026-03-24 18:19:33 - sqlalchemy.engine.Engine - INFO - COMMIT
+2026-03-24 18:19:33 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2026-03-24 18:19:33 - sqlalchemy.engine.Engine - INFO - SELECT datasets.id, datasets.filename, datasets.original_filename, datasets.file_path, datasets.file_size, datasets.file_type, datasets.status, datasets.row_count, datasets.column_count, datasets.columns, datasets.column_types, datasets.summary_stats, datasets.created_at, datasets.updated_at, datasets.user_id 
+FROM datasets 
+WHERE datasets.id = $1::INTEGER
+2026-03-24 18:19:33 - sqlalchemy.engine.Engine - INFO - [cached since 1753s ago] (25,)
+2026-03-24 18:19:33 - app.services.data.parser_service - INFO - Parsed csv file: 36 rows, 16 columns
+2026-03-24 18:19:33 - sqlalchemy.engine.Engine - INFO - UPDATE datasets SET status=$1::datasetstatus, row_count=$2::INTEGER, column_count=$3::INTEGER, columns=$4::JSON, column_types=$5::JSON, summary_stats=$6::JSON, updated_at=now() WHERE datasets.id = $7::INTEGER
+2026-03-24 18:19:33 - sqlalchemy.engine.Engine - INFO - [generated in 0.00354s] ('PROCESSED', 36, 16, '["Unnamed: 0", "Company", "TypeName", "Inches", "ScreenResolution", "Cpu", "Ram", "Memory", "Gpu", "OpSys", "Weight", "Price", "Price_outlier", "Order_Date", "Is_Promotion", "Discount_Flag"]', '{"Unnamed: 0": "int64", "Company": "object", "TypeName": "object", "Inches": "float64", "ScreenResolution": "object", "Cpu": "object", "Ram": "int64" ... (48 characters truncated) ... "object", "Weight": "float64", "Price": "int64", "Price_outlier": "int64", "Order_Date": "object", "Is_Promotion": "int64", "Discount_Flag": "int64"}', '{"Unnamed: 0": {"count": 36.0, "mean": 17.5, "std": 10.535653752852738, "min": 0.0, "25%": 8.75, "50%": 17.5, "75%": 26.25, "max": 35.0}, "Inches": { ... (844 characters truncated) ... Discount_Flag": {"count": 36.0, "mean": 0.16666666666666666, "std": 0.37796447300922725, "min": 0.0, "25%": 0.0, "50%": 0.0, "75%": 0.0, "max": 1.0}}', 25)
+2026-03-24 18:19:33 - sqlalchemy.engine.Engine - INFO - COMMIT
+2026-03-24 18:19:33 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2026-03-24 18:19:33 - sqlalchemy.engine.Engine - INFO - SELECT datasets.id, datasets.filename, datasets.original_filename, datasets.file_path, datasets.file_size, datasets.file_type, datasets.status, datasets.row_count, datasets.column_count, datasets.columns, datasets.column_types, datasets.summary_stats, datasets.created_at, datasets.updated_at, datasets.user_id 
+FROM datasets 
+WHERE datasets.id = $1::INTEGER
+2026-03-24 18:19:33 - sqlalchemy.engine.Engine - INFO - [cached since 1754s ago] (25,)
+2026-03-24 18:19:33 - sqlalchemy.engine.Engine - INFO - COMMIT
+2026-03-24 18:19:33 - app.api.v1.routes.upload - INFO - Dataset 25 processed successfully
+2026-03-24 18:19:33 - app.api.v1.routes.upload - INFO - Starting auto-analysis for dataset 25...
+2026-03-24 18:19:34 - app.services.analysis.column_analyzer - INFO - Analyzing 16 columns from 36 rows...
+2026-03-24 18:19:34 - app.services.analysis.column_analyzer - INFO - Detecting relationships with CustomPPS...
+2026-03-24 18:19:39 - app.services.analysis.column_analyzer - INFO - Found 37 PPS relationships
+2026-03-24 18:19:39 - app.services.analysis.column_analyzer - INFO - Found 8 correlations
+2026-03-24 18:19:39 - app.services.analysis.column_analyzer - INFO - Analysis complete: 39 relationships found
+2026-03-24 18:19:39 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2026-03-24 18:19:39 - sqlalchemy.engine.Engine - INFO - INSERT INTO column_analysis (dataset_id, metrics, dimensions, identifiers, temporal, geographic, other, relationships, dashboard_columns, primary_metric, analysis_method, confidence_score, total_relationships, updated_at) VALUES ($1::INTEGER, $2::JSON, $3::JSON, $4::JSON, $5::JSON, $6::JSON, $7::JSON, $8::JSON, $9::JSON, $10::VARCHAR, $11::VARCHAR, $12::FLOAT, $13::INTEGER, $14::TIMESTAMP WITH TIME ZONE) RETURNING column_analysis.id, column_analysis.created_at
+2026-03-24 18:19:39 - sqlalchemy.engine.Engine - INFO - [generated in 0.04097s] (25, '[]', '["Company", "TypeName", "ScreenResolution", "Cpu", "Memory", "Gpu", "OpSys"]', '["Unnamed: 0"]', '["Inches", "Ram", "Weight", "Price", "Price_outlier", "Order_Date", "Is_Promotion", "Discount_Flag"]', '[]', '[]', '[{"columns": ["Company", "Price_outlier"], "type": "predictive", "strength": 1.0, "direction": "Company \\u2192 Price_outlier", "method": "custom_pps ... (8197 characters truncated) ... "strength": 0.304, "direction": "Memory \\u2192 Price", "method": "custom_pps", "insight": "Memory can predict Price", "case": "numeric_to_numeric"}]', '["Company", "TypeName", "ScreenResolution", "Inches"]', None, 'custom_pps', np.float64(1.0), 39, None)
+2026-03-24 18:19:39 - sqlalchemy.engine.Engine - INFO - ROLLBACK
+2026-03-24 18:19:39 - app.api.v1.routes.upload - ERROR - Auto-analysis failed for dataset 25: (sqlalchemy.dialects.postgresql.asyncpg.IntegrityError) <class 'asyncpg.exceptions.ForeignKeyViolationError'>: une instruction insert ou update sur la table « column_analysis » viole la contrainte de clé
+étrangère « column_analysis_dataset_id_fkey »
+DETAIL:  La clé (dataset_id)=(25) n'est pas présente dans la table « datasets ».
+[SQL: INSERT INTO column_analysis (dataset_id, metrics, dimensions, identifiers, temporal, geographic, other, relationships, dashboard_columns, primary_metric, analysis_method, confidence_score, total_relationships, updated_at) VALUES ($1::INTEGER, $2::JSON, $3::JSON, $4::JSON, $5::JSON, $6::JSON, $7::JSON, $8::JSON, $9::JSON, $10::VARCHAR, $11::VARCHAR, $12::FLOAT, $13::INTEGER, $14::TIMESTAMP WITH TIME ZONE) RETURNING column_analysis.id, column_analysis.created_at]
+[parameters: (25, '[]', '["Company", "TypeName", "ScreenResolution", "Cpu", "Memory", "Gpu", "OpSys"]', '["Unnamed: 0"]', '["Inches", "Ram", "Weight", "Price", "Price_outlier", "Order_Date", "Is_Promotion", "Discount_Flag"]', '[]', '[]', '[{"columns": ["Company", "Price_outlier"], "type": "predictive", "strength": 1.0, "direction": "Company \\u2192 Price_outlier", "method": "custom_pps ... (8197 characters truncated) ... "strength": 0.304, "direction": "Memory \\u2192 Price", "method": "custom_pps", "insight": "Memory can predict Price", "case": "numeric_to_numeric"}]', '["Company", "TypeName", "ScreenResolution", "Inches"]', None, 'custom_pps', np.float64(1.0), 39, None)]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2026-03-24 18:19:39 - sqlalchemy.engine.Engine - INFO - COMMIT
+2026-03-24 18:21:14 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2026-03-24 18:21:14 - sqlalchemy.engine.Engine - INFO - SELECT datasets.id, datasets.filename, datasets.original_filename, datasets.file_path, datasets.file_size, datasets.file_type, datasets.status, datasets.row_count, datasets.column_count, datasets.columns, datasets.column_types, datasets.summary_stats, datasets.created_at, datasets.updated_at, datasets.user_id 
+FROM datasets 
+WHERE datasets.id = $1::INTEGER
+2026-03-24 18:21:14 - sqlalchemy.engine.Engine - INFO - [cached since 1855s ago] (25,)
+2026-03-24 18:21:14 - sqlalchemy.engine.Engine - INFO - SELECT column_analysis.id, column_analysis.dataset_id, column_analysis.metrics, column_analysis.dimensions, column_analysis.identifiers, column_analysis.temporal, column_analysis.geographic, column_analysis.other, column_analysis.relationships, column_analysis.dashboard_columns, column_analysis.primary_metric, column_analysis.analysis_method, column_analysis.confidence_score, column_analysis.total_relationships, column_analysis.created_at, column_analysis.updated_at 
+FROM column_analysis 
+WHERE column_analysis.dataset_id = $1::INTEGER ORDER BY column_analysis.created_at DESC
+2026-03-24 18:21:14 - sqlalchemy.engine.Engine - INFO - [cached since 1854s ago] (25,)
+2026-03-24 18:21:14 - app.api.v1.routes.analysis - INFO - Loading dataset 25 for analysis...
+2026-03-24 18:21:14 - app.services.data.parser_service - INFO - Parsed csv file: 36 rows, 16 columns
+2026-03-24 18:21:14 - app.services.analysis.column_analyzer - INFO - Analyzing 16 columns from 36 rows...
+2026-03-24 18:21:14 - app.services.analysis.column_analyzer - INFO - Detecting relationships with CustomPPS...
+2026-03-24 18:21:18 - app.services.analysis.column_analyzer - INFO - Found 37 PPS relationships
+2026-03-24 18:21:18 - app.services.analysis.column_analyzer - INFO - Found 8 correlations
+2026-03-24 18:21:18 - app.services.analysis.column_analyzer - INFO - Analysis complete: 39 relationships found
+2026-03-24 18:21:18 - sqlalchemy.engine.Engine - INFO - INSERT INTO column_analysis (dataset_id, metrics, dimensions, identifiers, temporal, geographic, other, relationships, dashboard_columns, primary_metric, analysis_method, confidence_score, total_relationships, updated_at) VALUES ($1::INTEGER, $2::JSON, $3::JSON, $4::JSON, $5::JSON, $6::JSON, $7::JSON, $8::JSON, $9::JSON, $10::VARCHAR, $11::VARCHAR, $12::FLOAT, $13::INTEGER, $14::TIMESTAMP WITH TIME ZONE) RETURNING column_analysis.id, column_analysis.created_at
+2026-03-24 18:21:18 - sqlalchemy.engine.Engine - INFO - [generated in 0.00383s] (25, '[]', '["Company", "TypeName", "ScreenResolution", "Cpu", "Memory", "Gpu", "OpSys"]', '["Unnamed: 0"]', '["Inches", "Ram", "Weight", "Price", "Price_outlier", "Order_Date", "Is_Promotion", "Discount_Flag"]', '[]', '[]', '[{"columns": ["Company", "Price_outlier"], "type": "predictive", "strength": 1.0, "direction": "Company \\u2192 Price_outlier", "method": "custom_pps ... (8418 characters truncated) ... irection": "Cpu \\u2192 Memory", "insight": "Each Cpu belongs to exactly one Memory", "chart_suggestion": "treemap", "method": "hierarchy_detector"}]', '["Company", "TypeName", "ScreenResolution", "Inches"]', None, 'custom_pps', np.float64(1.0), 40, None)
+2026-03-24 18:21:18 - sqlalchemy.engine.Engine - INFO - SELECT column_analysis.id, column_analysis.dataset_id, column_analysis.metrics, column_analysis.dimensions, column_analysis.identifiers, column_analysis.temporal, column_analysis.geographic, column_analysis.other, column_analysis.relationships, column_analysis.dashboard_columns, column_analysis.primary_metric, column_analysis.analysis_method, column_analysis.confidence_score, column_analysis.total_relationships, column_analysis.created_at, column_analysis.updated_at 
+FROM column_analysis 
+WHERE column_analysis.id = $1::INTEGER
+2026-03-24 18:21:18 - sqlalchemy.engine.Engine - INFO - [generated in 0.00118s] (48,)
+2026-03-24 18:21:18 - app.repositories.analysis_repository - INFO - Created analysis 48 for dataset 25
+2026-03-24 18:21:18 - sqlalchemy.engine.Engine - INFO - COMMIT
+2026-03-24 18:21:18 - app.api.v1.routes.analysis - INFO - Analysis saved for dataset 25: 40 relationships
+2026-03-24 18:36:54 - root - INFO - Shutting down...
+2026-03-24 18:36:55 - app.core.database - INFO - Database connection closed
+2026-03-24 18:36:55 - app.core.cache - INFO - Redis connection closed
+2026-03-24 18:37:08 - root - INFO - Starting AI Data Analytics Service v1.0.0
+2026-03-24 18:37:08 - root - INFO - Environment: development
+2026-03-24 18:37:08 - sqlalchemy.engine.Engine - INFO - select pg_catalog.version()
+2026-03-24 18:37:08 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2026-03-24 18:37:08 - sqlalchemy.engine.Engine - INFO - select current_schema()
+2026-03-24 18:37:08 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2026-03-24 18:37:08 - sqlalchemy.engine.Engine - INFO - show standard_conforming_strings
+2026-03-24 18:37:08 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2026-03-24 18:37:08 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2026-03-24 18:37:08 - sqlalchemy.engine.Engine - INFO - SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2026-03-24 18:37:08 - sqlalchemy.engine.Engine - INFO - [generated in 0.00240s] ('datasets', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2026-03-24 18:37:08 - sqlalchemy.engine.Engine - INFO - SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2026-03-24 18:37:08 - sqlalchemy.engine.Engine - INFO - [cached since 0.02086s ago] ('column_analysis', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2026-03-24 18:37:08 - sqlalchemy.engine.Engine - INFO - SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2026-03-24 18:37:08 - sqlalchemy.engine.Engine - INFO - [cached since 0.02432s ago] ('cleaning_profiles', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2026-03-24 18:37:08 - sqlalchemy.engine.Engine - INFO - SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2026-03-24 18:37:08 - sqlalchemy.engine.Engine - INFO - [cached since 0.02762s ago] ('cleaning_logs', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2026-03-24 18:37:08 - sqlalchemy.engine.Engine - INFO - SELECT pg_catalog.pg_type.typname 
+FROM pg_catalog.pg_type JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_type.typnamespace 
+WHERE pg_catalog.pg_type.typname = $1::VARCHAR AND pg_catalog.pg_type_is_visible(pg_catalog.pg_type.oid) AND pg_catalog.pg_namespace.nspname != $2::VARCHAR
+2026-03-24 18:37:08 - sqlalchemy.engine.Engine - INFO - [generated in 0.00121s] ('datasetstatus', 'pg_catalog')
+2026-03-24 18:37:08 - sqlalchemy.engine.Engine - INFO - COMMIT
+2026-03-24 18:37:08 - app.core.database - INFO - Database initialized
+2026-03-24 18:37:08 - app.core.cache - INFO - Redis connected
+2026-03-24 18:37:29 - root - INFO - Shutting down...
+2026-03-24 18:37:29 - app.core.database - INFO - Database connection closed
+2026-03-24 18:37:29 - app.core.cache - INFO - Redis connection closed
+2026-03-24 18:37:34 - root - INFO - Starting AI Data Analytics Service v1.0.0
+2026-03-24 18:37:34 - root - INFO - Environment: development
+2026-03-24 18:37:35 - sqlalchemy.engine.Engine - INFO - select pg_catalog.version()
+2026-03-24 18:37:35 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2026-03-24 18:37:35 - sqlalchemy.engine.Engine - INFO - select current_schema()
+2026-03-24 18:37:35 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2026-03-24 18:37:35 - sqlalchemy.engine.Engine - INFO - show standard_conforming_strings
+2026-03-24 18:37:35 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2026-03-24 18:37:35 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2026-03-24 18:37:35 - sqlalchemy.engine.Engine - INFO - SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2026-03-24 18:37:35 - sqlalchemy.engine.Engine - INFO - [generated in 0.00130s] ('datasets', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2026-03-24 18:37:35 - sqlalchemy.engine.Engine - INFO - SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2026-03-24 18:37:35 - sqlalchemy.engine.Engine - INFO - [cached since 0.01131s ago] ('column_analysis', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2026-03-24 18:37:35 - sqlalchemy.engine.Engine - INFO - SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2026-03-24 18:37:35 - sqlalchemy.engine.Engine - INFO - [cached since 0.0145s ago] ('cleaning_profiles', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2026-03-24 18:37:35 - sqlalchemy.engine.Engine - INFO - SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2026-03-24 18:37:35 - sqlalchemy.engine.Engine - INFO - [cached since 0.0213s ago] ('cleaning_logs', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2026-03-24 18:37:35 - sqlalchemy.engine.Engine - INFO - SELECT pg_catalog.pg_type.typname 
+FROM pg_catalog.pg_type JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_type.typnamespace 
+WHERE pg_catalog.pg_type.typname = $1::VARCHAR AND pg_catalog.pg_type_is_visible(pg_catalog.pg_type.oid) AND pg_catalog.pg_namespace.nspname != $2::VARCHAR
+2026-03-24 18:37:35 - sqlalchemy.engine.Engine - INFO - [generated in 0.00111s] ('datasetstatus', 'pg_catalog')
+2026-03-24 18:37:35 - sqlalchemy.engine.Engine - INFO - COMMIT
+2026-03-24 18:37:35 - app.core.database - INFO - Database initialized
+2026-03-24 18:37:35 - app.core.cache - INFO - Redis connected
+2026-03-24 18:39:19 - root - INFO - Shutting down...
+2026-03-24 18:39:19 - app.core.database - INFO - Database connection closed
+2026-03-24 18:39:19 - app.core.cache - INFO - Redis connection closed
+2026-03-24 18:39:23 - root - INFO - Starting AI Data Analytics Service v1.0.0
+2026-03-24 18:39:23 - root - INFO - Environment: development
+2026-03-24 18:39:23 - sqlalchemy.engine.Engine - INFO - select pg_catalog.version()
+2026-03-24 18:39:23 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2026-03-24 18:39:23 - sqlalchemy.engine.Engine - INFO - select current_schema()
+2026-03-24 18:39:23 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2026-03-24 18:39:23 - sqlalchemy.engine.Engine - INFO - show standard_conforming_strings
+2026-03-24 18:39:23 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2026-03-24 18:39:23 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2026-03-24 18:39:23 - sqlalchemy.engine.Engine - INFO - SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2026-03-24 18:39:23 - sqlalchemy.engine.Engine - INFO - [generated in 0.00371s] ('datasets', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2026-03-24 18:39:23 - sqlalchemy.engine.Engine - INFO - SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2026-03-24 18:39:23 - sqlalchemy.engine.Engine - INFO - [cached since 0.0151s ago] ('column_analysis', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2026-03-24 18:39:23 - sqlalchemy.engine.Engine - INFO - SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2026-03-24 18:39:23 - sqlalchemy.engine.Engine - INFO - [cached since 0.01951s ago] ('cleaning_profiles', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2026-03-24 18:39:23 - sqlalchemy.engine.Engine - INFO - SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2026-03-24 18:39:23 - sqlalchemy.engine.Engine - INFO - [cached since 0.02447s ago] ('cleaning_logs', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2026-03-24 18:39:23 - sqlalchemy.engine.Engine - INFO - SELECT pg_catalog.pg_type.typname 
+FROM pg_catalog.pg_type JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_type.typnamespace 
+WHERE pg_catalog.pg_type.typname = $1::VARCHAR AND pg_catalog.pg_type_is_visible(pg_catalog.pg_type.oid) AND pg_catalog.pg_namespace.nspname != $2::VARCHAR
+2026-03-24 18:39:23 - sqlalchemy.engine.Engine - INFO - [generated in 0.00232s] ('datasetstatus', 'pg_catalog')
+2026-03-24 18:39:23 - sqlalchemy.engine.Engine - INFO - COMMIT
+2026-03-24 18:39:23 - app.core.database - INFO - Database initialized
+2026-03-24 18:39:23 - app.core.cache - INFO - Redis connected
+2026-03-24 18:40:41 - root - INFO - Shutting down...
+2026-03-24 18:40:41 - app.core.database - INFO - Database connection closed
+2026-03-24 18:40:41 - app.core.cache - INFO - Redis connection closed
+2026-03-24 18:40:55 - root - INFO - Starting AI Data Analytics Service v1.0.0
+2026-03-24 18:40:55 - root - INFO - Environment: development
+2026-03-24 18:40:55 - sqlalchemy.engine.Engine - INFO - select pg_catalog.version()
+2026-03-24 18:40:55 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2026-03-24 18:40:55 - sqlalchemy.engine.Engine - INFO - select current_schema()
+2026-03-24 18:40:55 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2026-03-24 18:40:55 - sqlalchemy.engine.Engine - INFO - show standard_conforming_strings
+2026-03-24 18:40:55 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2026-03-24 18:40:55 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2026-03-24 18:40:55 - sqlalchemy.engine.Engine - INFO - SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2026-03-24 18:40:55 - sqlalchemy.engine.Engine - INFO - [generated in 0.00123s] ('datasets', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2026-03-24 18:40:55 - sqlalchemy.engine.Engine - INFO - SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2026-03-24 18:40:55 - sqlalchemy.engine.Engine - INFO - [cached since 0.01023s ago] ('column_analysis', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2026-03-24 18:40:55 - sqlalchemy.engine.Engine - INFO - SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2026-03-24 18:40:55 - sqlalchemy.engine.Engine - INFO - [cached since 0.01257s ago] ('cleaning_profiles', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2026-03-24 18:40:55 - sqlalchemy.engine.Engine - INFO - SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2026-03-24 18:40:55 - sqlalchemy.engine.Engine - INFO - [cached since 0.01483s ago] ('cleaning_logs', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2026-03-24 18:40:55 - sqlalchemy.engine.Engine - INFO - SELECT pg_catalog.pg_type.typname 
+FROM pg_catalog.pg_type JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_type.typnamespace 
+WHERE pg_catalog.pg_type.typname = $1::VARCHAR AND pg_catalog.pg_type_is_visible(pg_catalog.pg_type.oid) AND pg_catalog.pg_namespace.nspname != $2::VARCHAR
+2026-03-24 18:40:55 - sqlalchemy.engine.Engine - INFO - [generated in 0.00188s] ('datasetstatus', 'pg_catalog')
+2026-03-24 18:40:55 - sqlalchemy.engine.Engine - INFO - COMMIT
+2026-03-24 18:40:55 - app.core.database - INFO - Database initialized
+2026-03-24 18:40:55 - app.core.cache - INFO - Redis connected
+2026-03-24 18:41:15 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2026-03-24 18:41:15 - sqlalchemy.engine.Engine - INFO - SELECT datasets.id, datasets.filename, datasets.original_filename, datasets.file_path, datasets.file_size, datasets.file_type, datasets.status, datasets.row_count, datasets.column_count, datasets.columns, datasets.column_types, datasets.summary_stats, datasets.created_at, datasets.updated_at, datasets.user_id 
+FROM datasets 
+WHERE datasets.id = $1::INTEGER
+2026-03-24 18:41:15 - sqlalchemy.engine.Engine - INFO - [generated in 0.00175s] (25,)
+2026-03-24 18:41:15 - sqlalchemy.engine.Engine - INFO - SELECT column_analysis.id, column_analysis.dataset_id, column_analysis.metrics, column_analysis.dimensions, column_analysis.identifiers, column_analysis.temporal, column_analysis.geographic, column_analysis.other, column_analysis.relationships, column_analysis.dashboard_columns, column_analysis.primary_metric, column_analysis.analysis_method, column_analysis.confidence_score, column_analysis.total_relationships, column_analysis.created_at, column_analysis.updated_at 
+FROM column_analysis 
+WHERE column_analysis.dataset_id = $1::INTEGER ORDER BY column_analysis.created_at DESC
+2026-03-24 18:41:15 - sqlalchemy.engine.Engine - INFO - [generated in 0.00291s] (25,)
+2026-03-24 18:41:15 - app.api.v1.routes.analysis - INFO - Returning existing analysis for dataset 25
+2026-03-24 18:41:15 - sqlalchemy.engine.Engine - INFO - COMMIT
+2026-03-24 18:41:44 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2026-03-24 18:41:44 - sqlalchemy.engine.Engine - INFO - SELECT datasets.id, datasets.filename, datasets.original_filename, datasets.file_path, datasets.file_size, datasets.file_type, datasets.status, datasets.row_count, datasets.column_count, datasets.columns, datasets.column_types, datasets.summary_stats, datasets.created_at, datasets.updated_at, datasets.user_id 
+FROM datasets 
+WHERE datasets.id = $1::INTEGER
+2026-03-24 18:41:44 - sqlalchemy.engine.Engine - INFO - [cached since 28.92s ago] (25,)
+2026-03-24 18:41:44 - app.services.data.parser_service - INFO - Parsed csv file: 36 rows, 16 columns
+2026-03-24 18:41:44 - sqlalchemy.engine.Engine - INFO - COMMIT
+2026-03-24 18:42:28 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2026-03-24 18:42:28 - sqlalchemy.engine.Engine - INFO - SELECT datasets.id, datasets.filename, datasets.original_filename, datasets.file_path, datasets.file_size, datasets.file_type, datasets.status, datasets.row_count, datasets.column_count, datasets.columns, datasets.column_types, datasets.summary_stats, datasets.created_at, datasets.updated_at, datasets.user_id 
+FROM datasets 
+WHERE datasets.id = $1::INTEGER
+2026-03-24 18:42:28 - sqlalchemy.engine.Engine - INFO - [cached since 72.58s ago] (23,)
+2026-03-24 18:42:28 - sqlalchemy.engine.Engine - INFO - SELECT column_analysis.id, column_analysis.dataset_id, column_analysis.metrics, column_analysis.dimensions, column_analysis.identifiers, column_analysis.temporal, column_analysis.geographic, column_analysis.other, column_analysis.relationships, column_analysis.dashboard_columns, column_analysis.primary_metric, column_analysis.analysis_method, column_analysis.confidence_score, column_analysis.total_relationships, column_analysis.created_at, column_analysis.updated_at 
+FROM column_analysis 
+WHERE column_analysis.dataset_id = $1::INTEGER ORDER BY column_analysis.created_at DESC
+2026-03-24 18:42:28 - sqlalchemy.engine.Engine - INFO - [cached since 72.52s ago] (23,)
+2026-03-24 18:42:28 - app.api.v1.routes.analysis - INFO - Loading dataset 23 for analysis...
+2026-03-24 18:42:28 - app.services.data.parser_service - INFO - Parsed csv file: 20 rows, 6 columns
+2026-03-24 18:42:28 - app.services.analysis.column_analyzer - INFO - Analyzing 6 columns from 20 rows...
+2026-03-24 18:42:28 - app.services.analysis.column_analyzer - INFO - Detecting relationships with CustomPPS...
+2026-03-24 18:42:28 - app.services.analysis.column_analyzer - INFO - Excluding from PPS: ['employee_id', 'certification_obtained', 'training_id']
+2026-03-24 18:42:28 - app.services.analysis.column_analyzer - INFO - Found 0 PPS relationships
+2026-03-24 18:42:28 - app.services.analysis.column_analyzer - INFO - Analysis complete: 0 relationships found
+2026-03-24 18:42:28 - sqlalchemy.engine.Engine - INFO - INSERT INTO column_analysis (dataset_id, metrics, dimensions, identifiers, temporal, geographic, other, relationships, dashboard_columns, primary_metric, analysis_method, confidence_score, total_relationships, updated_at) VALUES ($1::INTEGER, $2::JSON, $3::JSON, $4::JSON, $5::JSON, $6::JSON, $7::JSON, $8::JSON, $9::JSON, $10::VARCHAR, $11::VARCHAR, $12::FLOAT, $13::INTEGER, $14::TIMESTAMP WITH TIME ZONE) RETURNING column_analysis.id, column_analysis.created_at
+2026-03-24 18:42:28 - sqlalchemy.engine.Engine - INFO - [generated in 0.00990s] (23, '["score"]', '["training_name"]', '["training_id", "employee_id"]', '["completion_date"]', '[]', '["certification_obtained"]', '[{"columns": ["training_name", "completion_date"], "type": "hierarchy", "strength": 1.0, "direction": "training_name \\u2192 completion_date", "insig ... (584 characters truncated) ... ed", "insight": "Each completion_date belongs to exactly one certification_obtained", "chart_suggestion": "treemap", "method": "hierarchy_detector"}]', '["score", "training_name", "completion_date"]', 'score', 'custom_pps', 0.5, 3, None)
+2026-03-24 18:42:28 - sqlalchemy.engine.Engine - INFO - SELECT column_analysis.id, column_analysis.dataset_id, column_analysis.metrics, column_analysis.dimensions, column_analysis.identifiers, column_analysis.temporal, column_analysis.geographic, column_analysis.other, column_analysis.relationships, column_analysis.dashboard_columns, column_analysis.primary_metric, column_analysis.analysis_method, column_analysis.confidence_score, column_analysis.total_relationships, column_analysis.created_at, column_analysis.updated_at 
+FROM column_analysis 
+WHERE column_analysis.id = $1::INTEGER
+2026-03-24 18:42:28 - sqlalchemy.engine.Engine - INFO - [generated in 0.00133s] (49,)
+2026-03-24 18:42:28 - app.repositories.analysis_repository - INFO - Created analysis 49 for dataset 23
+2026-03-24 18:42:28 - sqlalchemy.engine.Engine - INFO - COMMIT
+2026-03-24 18:42:28 - app.api.v1.routes.analysis - INFO - Analysis saved for dataset 23: 3 relationships
+2026-03-24 18:43:41 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2026-03-24 18:43:41 - sqlalchemy.engine.Engine - INFO - SELECT datasets.id, datasets.filename, datasets.original_filename, datasets.file_path, datasets.file_size, datasets.file_type, datasets.status, datasets.row_count, datasets.column_count, datasets.columns, datasets.column_types, datasets.summary_stats, datasets.created_at, datasets.updated_at, datasets.user_id 
+FROM datasets 
+WHERE datasets.id = $1::INTEGER
+2026-03-24 18:43:41 - sqlalchemy.engine.Engine - INFO - [cached since 145.5s ago] (21,)
+2026-03-24 18:43:41 - sqlalchemy.engine.Engine - INFO - SELECT column_analysis.id, column_analysis.dataset_id, column_analysis.metrics, column_analysis.dimensions, column_analysis.identifiers, column_analysis.temporal, column_analysis.geographic, column_analysis.other, column_analysis.relationships, column_analysis.dashboard_columns, column_analysis.primary_metric, column_analysis.analysis_method, column_analysis.confidence_score, column_analysis.total_relationships, column_analysis.created_at, column_analysis.updated_at 
+FROM column_analysis 
+WHERE column_analysis.dataset_id = $1::INTEGER ORDER BY column_analysis.created_at DESC
+2026-03-24 18:43:41 - sqlalchemy.engine.Engine - INFO - [cached since 145.4s ago] (21,)
+2026-03-24 18:43:41 - app.api.v1.routes.analysis - INFO - Returning existing analysis for dataset 21
+2026-03-24 18:43:41 - sqlalchemy.engine.Engine - INFO - ROLLBACK
+2026-03-24 18:43:41 - app.core.database - ERROR - Database error: 11 validation errors:
+  {'type': 'less_than_equal', 'loc': ('response', 'relationships', 0, 'strength'), 'msg': 'Input should be less than or equal to 1', 'input': 1.0000000000000002, 'ctx': {'le': 1.0}}
+  {'type': 'less_than_equal', 'loc': ('response', 'relationships', 1, 'strength'), 'msg': 'Input should be less than or equal to 1', 'input': 1.0000000000000002, 'ctx': {'le': 1.0}}
+  {'type': 'less_than_equal', 'loc': ('response', 'relationships', 2, 'strength'), 'msg': 'Input should be less than or equal to 1', 'input': 1.0000000000000002, 'ctx': {'le': 1.0}}
+  {'type': 'less_than_equal', 'loc': ('response', 'relationships', 3, 'strength'), 'msg': 'Input should be less than or equal to 1', 'input': 1.0000000000000002, 'ctx': {'le': 1.0}}
+  {'type': 'less_than_equal', 'loc': ('response', 'relationships', 4, 'strength'), 'msg': 'Input should be less than or equal to 1', 'input': 1.0000000000000002, 'ctx': {'le': 1.0}}
+  {'type': 'less_than_equal', 'loc': ('response', 'relationships', 5, 'strength'), 'msg': 'Input should be less than or equal to 1', 'input': 1.0000000000000002, 'ctx': {'le': 1.0}}
+  {'type': 'less_than_equal', 'loc': ('response', 'relationships', 6, 'strength'), 'msg': 'Input should be less than or equal to 1', 'input': 1.0000000000000002, 'ctx': {'le': 1.0}}
+  {'type': 'less_than_equal', 'loc': ('response', 'relationships', 7, 'strength'), 'msg': 'Input should be less than or equal to 1', 'input': 1.0000000000000002, 'ctx': {'le': 1.0}}
+  {'type': 'less_than_equal', 'loc': ('response', 'relationships', 8, 'strength'), 'msg': 'Input should be less than or equal to 1', 'input': 1.0000000000000002, 'ctx': {'le': 1.0}}
+  {'type': 'less_than_equal', 'loc': ('response', 'relationships', 9, 'strength'), 'msg': 'Input should be less than or equal to 1', 'input': 1.0000000000000002, 'ctx': {'le': 1.0}}
+  {'type': 'less_than_equal', 'loc': ('response', 'relationships', 10, 'strength'), 'msg': 'Input should be less than or equal to 1', 'input': 1.0000000000000002, 'ctx': {'le': 1.0}}
+
+  File "C:\stage\auth\IA-service\app\api\v1\routes\analysis.py", line 131, in analyze_dataset
+    POST /api/v1/datasets/{dataset_id}/analyze
+2026-03-24 18:43:47 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2026-03-24 18:43:47 - sqlalchemy.engine.Engine - INFO - SELECT datasets.id, datasets.filename, datasets.original_filename, datasets.file_path, datasets.file_size, datasets.file_type, datasets.status, datasets.row_count, datasets.column_count, datasets.columns, datasets.column_types, datasets.summary_stats, datasets.created_at, datasets.updated_at, datasets.user_id 
+FROM datasets 
+WHERE datasets.id = $1::INTEGER
+2026-03-24 18:43:47 - sqlalchemy.engine.Engine - INFO - [cached since 152.2s ago] (19,)
+2026-03-24 18:43:47 - sqlalchemy.engine.Engine - INFO - ROLLBACK
+2026-03-24 18:43:47 - app.core.database - ERROR - Database error: 404: Dataset 19 not found
+2026-03-24 18:43:54 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2026-03-24 18:43:54 - sqlalchemy.engine.Engine - INFO - SELECT datasets.id, datasets.filename, datasets.original_filename, datasets.file_path, datasets.file_size, datasets.file_type, datasets.status, datasets.row_count, datasets.column_count, datasets.columns, datasets.column_types, datasets.summary_stats, datasets.created_at, datasets.updated_at, datasets.user_id 
+FROM datasets 
+WHERE datasets.id = $1::INTEGER
+2026-03-24 18:43:54 - sqlalchemy.engine.Engine - INFO - [cached since 159.4s ago] (18,)
+2026-03-24 18:43:54 - sqlalchemy.engine.Engine - INFO - SELECT column_analysis.id, column_analysis.dataset_id, column_analysis.metrics, column_analysis.dimensions, column_analysis.identifiers, column_analysis.temporal, column_analysis.geographic, column_analysis.other, column_analysis.relationships, column_analysis.dashboard_columns, column_analysis.primary_metric, column_analysis.analysis_method, column_analysis.confidence_score, column_analysis.total_relationships, column_analysis.created_at, column_analysis.updated_at 
+FROM column_analysis 
+WHERE column_analysis.dataset_id = $1::INTEGER ORDER BY column_analysis.created_at DESC
+2026-03-24 18:43:54 - sqlalchemy.engine.Engine - INFO - [cached since 159.3s ago] (18,)
+2026-03-24 18:43:54 - sqlalchemy.engine.Engine - INFO - ROLLBACK
+2026-03-24 18:43:54 - app.core.database - ERROR - Database error: Multiple rows were found when one or none was required
+2026-03-24 18:44:00 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2026-03-24 18:44:00 - sqlalchemy.engine.Engine - INFO - SELECT datasets.id, datasets.filename, datasets.original_filename, datasets.file_path, datasets.file_size, datasets.file_type, datasets.status, datasets.row_count, datasets.column_count, datasets.columns, datasets.column_types, datasets.summary_stats, datasets.created_at, datasets.updated_at, datasets.user_id 
+FROM datasets 
+WHERE datasets.id = $1::INTEGER
+2026-03-24 18:44:00 - sqlalchemy.engine.Engine - INFO - [cached since 164.6s ago] (7,)
+2026-03-24 18:44:00 - sqlalchemy.engine.Engine - INFO - SELECT column_analysis.id, column_analysis.dataset_id, column_analysis.metrics, column_analysis.dimensions, column_analysis.identifiers, column_analysis.temporal, column_analysis.geographic, column_analysis.other, column_analysis.relationships, column_analysis.dashboard_columns, column_analysis.primary_metric, column_analysis.analysis_method, column_analysis.confidence_score, column_analysis.total_relationships, column_analysis.created_at, column_analysis.updated_at 
+FROM column_analysis 
+WHERE column_analysis.dataset_id = $1::INTEGER ORDER BY column_analysis.created_at DESC
+2026-03-24 18:44:00 - sqlalchemy.engine.Engine - INFO - [cached since 164.5s ago] (7,)
+2026-03-24 18:44:00 - app.api.v1.routes.analysis - INFO - Returning existing analysis for dataset 7
+2026-03-24 18:44:00 - sqlalchemy.engine.Engine - INFO - COMMIT
+2026-03-24 18:44:11 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2026-03-24 18:44:11 - sqlalchemy.engine.Engine - INFO - SELECT datasets.id, datasets.filename, datasets.original_filename, datasets.file_path, datasets.file_size, datasets.file_type, datasets.status, datasets.row_count, datasets.column_count, datasets.columns, datasets.column_types, datasets.summary_stats, datasets.created_at, datasets.updated_at, datasets.user_id 
+FROM datasets 
+WHERE datasets.id = $1::INTEGER
+2026-03-24 18:44:11 - sqlalchemy.engine.Engine - INFO - [cached since 175.9s ago] (4,)
+2026-03-24 18:44:11 - sqlalchemy.engine.Engine - INFO - SELECT column_analysis.id, column_analysis.dataset_id, column_analysis.metrics, column_analysis.dimensions, column_analysis.identifiers, column_analysis.temporal, column_analysis.geographic, column_analysis.other, column_analysis.relationships, column_analysis.dashboard_columns, column_analysis.primary_metric, column_analysis.analysis_method, column_analysis.confidence_score, column_analysis.total_relationships, column_analysis.created_at, column_analysis.updated_at 
+FROM column_analysis 
+WHERE column_analysis.dataset_id = $1::INTEGER ORDER BY column_analysis.created_at DESC
+2026-03-24 18:44:11 - sqlalchemy.engine.Engine - INFO - [cached since 175.9s ago] (4,)
+2026-03-24 18:44:11 - app.api.v1.routes.analysis - INFO - Returning existing analysis for dataset 4
+2026-03-24 18:44:11 - sqlalchemy.engine.Engine - INFO - SELECT datasets.id, datasets.filename, datasets.original_filename, datasets.file_path, datasets.file_size, datasets.file_type, datasets.status, datasets.row_count, datasets.column_count, datasets.columns, datasets.column_types, datasets.summary_stats, datasets.created_at, datasets.updated_at, datasets.user_id 
+FROM datasets 
+WHERE datasets.id = $1::INTEGER
+2026-03-24 18:44:11 - sqlalchemy.engine.Engine - INFO - [cached since 176s ago] (4,)
+2026-03-24 18:44:11 - app.services.data.parser_service - INFO - Parsed csv file: 1274 rows, 13 columns
+2026-03-24 18:44:11 - sqlalchemy.engine.Engine - INFO - COMMIT
+2026-03-24 18:46:00 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2026-03-24 18:46:00 - sqlalchemy.engine.Engine - INFO - SELECT datasets.id, datasets.filename, datasets.original_filename, datasets.file_path, datasets.file_size, datasets.file_type, datasets.status, datasets.row_count, datasets.column_count, datasets.columns, datasets.column_types, datasets.summary_stats, datasets.created_at, datasets.updated_at, datasets.user_id 
+FROM datasets 
+WHERE datasets.id = $1::INTEGER
+2026-03-24 18:46:00 - sqlalchemy.engine.Engine - INFO - [cached since 285.4s ago] (25,)
+2026-03-24 18:46:01 - sqlalchemy.engine.Engine - INFO - SELECT column_analysis.id, column_analysis.dataset_id, column_analysis.metrics, column_analysis.dimensions, column_analysis.identifiers, column_analysis.temporal, column_analysis.geographic, column_analysis.other, column_analysis.relationships, column_analysis.dashboard_columns, column_analysis.primary_metric, column_analysis.analysis_method, column_analysis.confidence_score, column_analysis.total_relationships, column_analysis.created_at, column_analysis.updated_at 
+FROM column_analysis 
+WHERE column_analysis.dataset_id = $1::INTEGER ORDER BY column_analysis.created_at DESC
+2026-03-24 18:46:01 - sqlalchemy.engine.Engine - INFO - [cached since 285.4s ago] (25,)
+2026-03-24 18:46:01 - app.api.v1.routes.analysis - INFO - Returning existing analysis for dataset 25
+2026-03-24 18:46:01 - sqlalchemy.engine.Engine - INFO - COMMIT
+2026-03-24 18:49:57 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2026-03-24 18:49:57 - sqlalchemy.engine.Engine - INFO - SELECT datasets.id, datasets.filename, datasets.original_filename, datasets.file_path, datasets.file_size, datasets.file_type, datasets.status, datasets.row_count, datasets.column_count, datasets.columns, datasets.column_types, datasets.summary_stats, datasets.created_at, datasets.updated_at, datasets.user_id 
+FROM datasets 
+WHERE datasets.id = $1::INTEGER
+2026-03-24 18:49:57 - sqlalchemy.engine.Engine - INFO - [cached since 521.7s ago] (25,)
+2026-03-24 18:49:57 - app.api.v1.routes.analysis - INFO - Loading dataset 25 for analysis...
+2026-03-24 18:49:57 - app.services.data.parser_service - INFO - Parsed csv file: 36 rows, 16 columns
+2026-03-24 18:49:57 - app.services.analysis.column_analyzer - INFO - Analyzing 16 columns from 36 rows...
+2026-03-24 18:49:57 - app.services.analysis.column_analyzer - INFO - Detecting relationships with CustomPPS...
+2026-03-24 18:49:57 - app.services.analysis.column_analyzer - INFO - Excluding from PPS: ['Price_outlier', 'Is_Promotion', 'Discount_Flag', 'Unnamed: 0']
+2026-03-24 18:49:59 - app.services.analysis.column_analyzer - INFO - Found 11 PPS relationships
+2026-03-24 18:49:59 - app.services.analysis.column_analyzer - INFO - Found 6 correlations
+2026-03-24 18:49:59 - app.services.analysis.column_analyzer - INFO - Analysis complete: 14 relationships found
+2026-03-24 18:49:59 - sqlalchemy.engine.Engine - INFO - INSERT INTO column_analysis (dataset_id, metrics, dimensions, identifiers, temporal, geographic, other, relationships, dashboard_columns, primary_metric, analysis_method, confidence_score, total_relationships, updated_at) VALUES ($1::INTEGER, $2::JSON, $3::JSON, $4::JSON, $5::JSON, $6::JSON, $7::JSON, $8::JSON, $9::JSON, $10::VARCHAR, $11::VARCHAR, $12::FLOAT, $13::INTEGER, $14::TIMESTAMP WITH TIME ZONE) RETURNING column_analysis.id, column_analysis.created_at
+2026-03-24 18:49:59 - sqlalchemy.engine.Engine - INFO - [cached since 450.8s ago] (25, '["Inches", "Ram", "Weight", "Price"]', '["Company", "TypeName", "ScreenResolution", "Cpu", "Memory", "Gpu", "OpSys"]', '["Unnamed: 0"]', '["Order_Date"]', '[]', '["Price_outlier", "Is_Promotion", "Discount_Flag"]', '[{"columns": ["Inches", "Weight"], "type": "predictive", "strength": 0.886, "direction": "Inches \\u2192 Weight", "method": "custom_pps", "insight":  ... (2654 characters truncated) ... irection": "Cpu \\u2192 Memory", "insight": "Each Cpu belongs to exactly one Memory", "chart_suggestion": "treemap", "method": "hierarchy_detector"}]', '["Price", "Ram", "Inches", "Company", "TypeName", "ScreenResolution"]', 'Price', 'custom_pps', np.float64(0.82), 15, None)
+2026-03-24 18:49:59 - sqlalchemy.engine.Engine - INFO - SELECT column_analysis.id, column_analysis.dataset_id, column_analysis.metrics, column_analysis.dimensions, column_analysis.identifiers, column_analysis.temporal, column_analysis.geographic, column_analysis.other, column_analysis.relationships, column_analysis.dashboard_columns, column_analysis.primary_metric, column_analysis.analysis_method, column_analysis.confidence_score, column_analysis.total_relationships, column_analysis.created_at, column_analysis.updated_at 
+FROM column_analysis 
+WHERE column_analysis.id = $1::INTEGER
+2026-03-24 18:49:59 - sqlalchemy.engine.Engine - INFO - [cached since 450.8s ago] (50,)
+2026-03-24 18:49:59 - app.repositories.analysis_repository - INFO - Created analysis 50 for dataset 25
+2026-03-24 18:49:59 - sqlalchemy.engine.Engine - INFO - COMMIT
+2026-03-24 18:49:59 - app.api.v1.routes.analysis - INFO - Analysis saved for dataset 25: 15 relationships
+2026-03-24 18:51:30 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2026-03-24 18:51:30 - sqlalchemy.engine.Engine - INFO - SELECT datasets.id, datasets.filename, datasets.original_filename, datasets.file_path, datasets.file_size, datasets.file_type, datasets.status, datasets.row_count, datasets.column_count, datasets.columns, datasets.column_types, datasets.summary_stats, datasets.created_at, datasets.updated_at, datasets.user_id 
+FROM datasets 
+WHERE datasets.id = $1::INTEGER
+2026-03-24 18:51:30 - sqlalchemy.engine.Engine - INFO - [cached since 615.2s ago] (25,)
+2026-03-24 18:51:30 - sqlalchemy.engine.Engine - INFO - SELECT column_analysis.id, column_analysis.dataset_id, column_analysis.metrics, column_analysis.dimensions, column_analysis.identifiers, column_analysis.temporal, column_analysis.geographic, column_analysis.other, column_analysis.relationships, column_analysis.dashboard_columns, column_analysis.primary_metric, column_analysis.analysis_method, column_analysis.confidence_score, column_analysis.total_relationships, column_analysis.created_at, column_analysis.updated_at 
+FROM column_analysis 
+WHERE column_analysis.dataset_id = $1::INTEGER ORDER BY column_analysis.created_at DESC
+2026-03-24 18:51:30 - sqlalchemy.engine.Engine - INFO - [cached since 615.1s ago] (25,)
+2026-03-24 18:51:30 - sqlalchemy.engine.Engine - INFO - ROLLBACK
+2026-03-24 18:51:30 - app.core.database - ERROR - Database error: Multiple rows were found when one or none was required
+2026-03-24 18:52:20 - root - INFO - Shutting down...
+2026-03-24 18:52:20 - app.core.database - INFO - Database connection closed
+2026-03-24 18:52:20 - app.core.cache - INFO - Redis connection closed
+2026-03-24 18:52:27 - root - INFO - Starting AI Data Analytics Service v1.0.0
+2026-03-24 18:52:27 - root - INFO - Environment: development
+2026-03-24 18:52:27 - sqlalchemy.engine.Engine - INFO - select pg_catalog.version()
+2026-03-24 18:52:27 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2026-03-24 18:52:27 - sqlalchemy.engine.Engine - INFO - select current_schema()
+2026-03-24 18:52:27 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2026-03-24 18:52:27 - sqlalchemy.engine.Engine - INFO - show standard_conforming_strings
+2026-03-24 18:52:27 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2026-03-24 18:52:27 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2026-03-24 18:52:27 - sqlalchemy.engine.Engine - INFO - SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2026-03-24 18:52:27 - sqlalchemy.engine.Engine - INFO - [generated in 0.00253s] ('datasets', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2026-03-24 18:52:27 - sqlalchemy.engine.Engine - INFO - SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2026-03-24 18:52:27 - sqlalchemy.engine.Engine - INFO - [cached since 0.01767s ago] ('column_analysis', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2026-03-24 18:52:27 - sqlalchemy.engine.Engine - INFO - SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2026-03-24 18:52:27 - sqlalchemy.engine.Engine - INFO - [cached since 0.02455s ago] ('cleaning_profiles', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2026-03-24 18:52:27 - sqlalchemy.engine.Engine - INFO - SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2026-03-24 18:52:27 - sqlalchemy.engine.Engine - INFO - [cached since 0.0286s ago] ('cleaning_logs', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2026-03-24 18:52:27 - sqlalchemy.engine.Engine - INFO - SELECT pg_catalog.pg_type.typname 
+FROM pg_catalog.pg_type JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_type.typnamespace 
+WHERE pg_catalog.pg_type.typname = $1::VARCHAR AND pg_catalog.pg_type_is_visible(pg_catalog.pg_type.oid) AND pg_catalog.pg_namespace.nspname != $2::VARCHAR
+2026-03-24 18:52:27 - sqlalchemy.engine.Engine - INFO - [generated in 0.00295s] ('datasetstatus', 'pg_catalog')
+2026-03-24 18:52:27 - sqlalchemy.engine.Engine - INFO - COMMIT
+2026-03-24 18:52:27 - app.core.database - INFO - Database initialized
+2026-03-24 18:52:27 - app.core.cache - INFO - Redis connected
+2026-03-24 18:54:13 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2026-03-24 18:54:13 - sqlalchemy.engine.Engine - INFO - SELECT datasets.id, datasets.filename, datasets.original_filename, datasets.file_path, datasets.file_size, datasets.file_type, datasets.status, datasets.row_count, datasets.column_count, datasets.columns, datasets.column_types, datasets.summary_stats, datasets.created_at, datasets.updated_at, datasets.user_id 
+FROM datasets 
+WHERE datasets.id = $1::INTEGER
+2026-03-24 18:54:13 - sqlalchemy.engine.Engine - INFO - [generated in 0.00186s] (25,)
+2026-03-24 18:54:13 - app.api.v1.routes.analysis - INFO - Loading dataset 25 for analysis...
+2026-03-24 18:54:13 - app.services.data.parser_service - INFO - Parsed csv file: 36 rows, 16 columns
+2026-03-24 18:54:13 - app.services.analysis.column_analyzer - INFO - Analyzing 16 columns from 36 rows...
+2026-03-24 18:54:13 - app.services.analysis.column_analyzer - INFO - Detecting relationships with CustomPPS...
+2026-03-24 18:54:13 - app.services.analysis.column_analyzer - INFO - Excluding from PPS: ['Is_Promotion', 'Discount_Flag', 'Unnamed: 0', 'Price_outlier']
+2026-03-24 18:54:16 - app.services.analysis.column_analyzer - INFO - Found 11 PPS relationships
+2026-03-24 18:54:16 - app.services.analysis.column_analyzer - INFO - Found 6 correlations
+2026-03-24 18:54:16 - app.services.analysis.column_analyzer - INFO - Analysis complete: 14 relationships found
+2026-03-24 18:54:16 - sqlalchemy.engine.Engine - INFO - DELETE FROM column_analysis WHERE column_analysis.dataset_id = $1::INTEGER
+2026-03-24 18:54:16 - sqlalchemy.engine.Engine - INFO - [generated in 0.00073s] (25,)
+2026-03-24 18:54:16 - sqlalchemy.engine.Engine - INFO - INSERT INTO column_analysis (dataset_id, metrics, dimensions, identifiers, temporal, geographic, other, relationships, dashboard_columns, primary_metric, analysis_method, confidence_score, total_relationships, updated_at) VALUES ($1::INTEGER, $2::JSON, $3::JSON, $4::JSON, $5::JSON, $6::JSON, $7::JSON, $8::JSON, $9::JSON, $10::VARCHAR, $11::VARCHAR, $12::FLOAT, $13::INTEGER, $14::TIMESTAMP WITH TIME ZONE) RETURNING column_analysis.id, column_analysis.created_at
+2026-03-24 18:54:16 - sqlalchemy.engine.Engine - INFO - [generated in 0.00146s] (25, '["Inches", "Ram", "Weight", "Price"]', '["Company", "TypeName", "ScreenResolution", "Cpu", "Memory", "Gpu", "OpSys"]', '["Unnamed: 0"]', '["Order_Date"]', '[]', '["Price_outlier", "Is_Promotion", "Discount_Flag"]', '[{"columns": ["Inches", "Weight"], "type": "predictive", "strength": 0.886, "direction": "Inches \\u2192 Weight", "method": "custom_pps", "insight":  ... (2654 characters truncated) ... irection": "Cpu \\u2192 Memory", "insight": "Each Cpu belongs to exactly one Memory", "chart_suggestion": "treemap", "method": "hierarchy_detector"}]', '["Price", "Ram", "Inches", "Company", "TypeName", "ScreenResolution"]', 'Price', 'custom_pps', np.float64(0.82), 15, None)
+2026-03-24 18:54:16 - sqlalchemy.engine.Engine - INFO - SELECT column_analysis.id, column_analysis.dataset_id, column_analysis.metrics, column_analysis.dimensions, column_analysis.identifiers, column_analysis.temporal, column_analysis.geographic, column_analysis.other, column_analysis.relationships, column_analysis.dashboard_columns, column_analysis.primary_metric, column_analysis.analysis_method, column_analysis.confidence_score, column_analysis.total_relationships, column_analysis.created_at, column_analysis.updated_at 
+FROM column_analysis 
+WHERE column_analysis.id = $1::INTEGER
+2026-03-24 18:54:16 - sqlalchemy.engine.Engine - INFO - [generated in 0.00237s] (51,)
+2026-03-24 18:54:16 - app.repositories.analysis_repository - INFO - Created analysis 51 for dataset 25
+2026-03-24 18:54:16 - sqlalchemy.engine.Engine - INFO - COMMIT
+2026-03-24 18:54:16 - app.api.v1.routes.analysis - INFO - Analysis saved for dataset 25: 15 relationships
+2026-03-24 19:04:26 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2026-03-24 19:04:26 - sqlalchemy.engine.Engine - INFO - SELECT datasets.id, datasets.filename, datasets.original_filename, datasets.file_path, datasets.file_size, datasets.file_type, datasets.status, datasets.row_count, datasets.column_count, datasets.columns, datasets.column_types, datasets.summary_stats, datasets.created_at, datasets.updated_at, datasets.user_id 
+FROM datasets 
+WHERE datasets.id = $1::INTEGER
+2026-03-24 19:04:26 - sqlalchemy.engine.Engine - INFO - [cached since 612.5s ago] (25,)
+2026-03-24 19:04:26 - sqlalchemy.engine.Engine - INFO - SELECT column_analysis.id, column_analysis.dataset_id, column_analysis.metrics, column_analysis.dimensions, column_analysis.identifiers, column_analysis.temporal, column_analysis.geographic, column_analysis.other, column_analysis.relationships, column_analysis.dashboard_columns, column_analysis.primary_metric, column_analysis.analysis_method, column_analysis.confidence_score, column_analysis.total_relationships, column_analysis.created_at, column_analysis.updated_at 
+FROM column_analysis 
+WHERE column_analysis.dataset_id = $1::INTEGER ORDER BY column_analysis.created_at DESC
+2026-03-24 19:04:26 - sqlalchemy.engine.Engine - INFO - [generated in 0.00179s] (25,)
+2026-03-24 19:04:26 - app.api.v1.routes.analysis - INFO - Returning existing analysis for dataset 25
+2026-03-24 19:04:26 - sqlalchemy.engine.Engine - INFO - SELECT datasets.id, datasets.filename, datasets.original_filename, datasets.file_path, datasets.file_size, datasets.file_type, datasets.status, datasets.row_count, datasets.column_count, datasets.columns, datasets.column_types, datasets.summary_stats, datasets.created_at, datasets.updated_at, datasets.user_id 
+FROM datasets 
+WHERE datasets.id = $1::INTEGER
+2026-03-24 19:04:26 - sqlalchemy.engine.Engine - INFO - [cached since 612.6s ago] (25,)
+2026-03-24 19:04:26 - app.services.data.parser_service - INFO - Parsed csv file: 36 rows, 16 columns
+2026-03-24 19:04:26 - sqlalchemy.engine.Engine - INFO - COMMIT
+2026-03-24 19:09:17 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2026-03-24 19:09:17 - sqlalchemy.engine.Engine - INFO - SELECT column_analysis.id, column_analysis.dataset_id, column_analysis.metrics, column_analysis.dimensions, column_analysis.identifiers, column_analysis.temporal, column_analysis.geographic, column_analysis.other, column_analysis.relationships, column_analysis.dashboard_columns, column_analysis.primary_metric, column_analysis.analysis_method, column_analysis.confidence_score, column_analysis.total_relationships, column_analysis.created_at, column_analysis.updated_at 
+FROM column_analysis 
+WHERE column_analysis.dataset_id = $1::INTEGER ORDER BY column_analysis.created_at DESC
+2026-03-24 19:09:17 - sqlalchemy.engine.Engine - INFO - [cached since 291.4s ago] (25,)
+2026-03-24 19:09:17 - sqlalchemy.engine.Engine - INFO - SELECT datasets.id, datasets.filename, datasets.original_filename, datasets.file_path, datasets.file_size, datasets.file_type, datasets.status, datasets.row_count, datasets.column_count, datasets.columns, datasets.column_types, datasets.summary_stats, datasets.created_at, datasets.updated_at, datasets.user_id 
+FROM datasets 
+WHERE datasets.id = $1::INTEGER
+2026-03-24 19:09:17 - sqlalchemy.engine.Engine - INFO - [cached since 904s ago] (25,)
+2026-03-24 19:09:17 - app.services.data.parser_service - INFO - Parsed csv file: 36 rows, 16 columns
+2026-03-24 19:09:17 - sqlalchemy.engine.Engine - INFO - COMMIT
+2026-03-24 19:09:41 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2026-03-24 19:09:41 - sqlalchemy.engine.Engine - INFO - SELECT datasets.id, datasets.filename, datasets.original_filename, datasets.file_path, datasets.file_size, datasets.file_type, datasets.status, datasets.row_count, datasets.column_count, datasets.columns, datasets.column_types, datasets.summary_stats, datasets.created_at, datasets.updated_at, datasets.user_id 
+FROM datasets 
+WHERE datasets.id = $1::INTEGER
+2026-03-24 19:09:41 - sqlalchemy.engine.Engine - INFO - [cached since 927.9s ago] (25,)
+2026-03-24 19:09:41 - app.api.v1.routes.analysis - INFO - Loading dataset 25 for analysis...
+2026-03-24 19:09:41 - app.services.data.parser_service - INFO - Parsed csv file: 36 rows, 16 columns
+2026-03-24 19:09:41 - app.services.analysis.column_analyzer - INFO - Analyzing 16 columns from 36 rows...
+2026-03-24 19:09:41 - app.services.analysis.column_analyzer - INFO - Detecting relationships with CustomPPS...
+2026-03-24 19:09:41 - app.services.analysis.column_analyzer - INFO - Excluding from PPS: ['Is_Promotion', 'Discount_Flag', 'Unnamed: 0', 'Price_outlier']
+2026-03-24 19:09:43 - app.services.analysis.column_analyzer - INFO - Found 11 PPS relationships
+2026-03-24 19:09:43 - app.services.analysis.column_analyzer - INFO - Found 6 correlations
+2026-03-24 19:09:43 - app.services.analysis.column_analyzer - INFO - Analysis complete: 14 relationships found
+2026-03-24 19:09:43 - sqlalchemy.engine.Engine - INFO - DELETE FROM column_analysis WHERE column_analysis.dataset_id = $1::INTEGER
+2026-03-24 19:09:43 - sqlalchemy.engine.Engine - INFO - [cached since 927.7s ago] (25,)
+2026-03-24 19:09:43 - sqlalchemy.engine.Engine - INFO - INSERT INTO column_analysis (dataset_id, metrics, dimensions, identifiers, temporal, geographic, other, relationships, dashboard_columns, primary_metric, analysis_method, confidence_score, total_relationships, updated_at) VALUES ($1::INTEGER, $2::JSON, $3::JSON, $4::JSON, $5::JSON, $6::JSON, $7::JSON, $8::JSON, $9::JSON, $10::VARCHAR, $11::VARCHAR, $12::FLOAT, $13::INTEGER, $14::TIMESTAMP WITH TIME ZONE) RETURNING column_analysis.id, column_analysis.created_at
+2026-03-24 19:09:43 - sqlalchemy.engine.Engine - INFO - [cached since 927.7s ago] (25, '["Inches", "Ram", "Weight", "Price"]', '["Company", "TypeName", "ScreenResolution", "Cpu", "Memory", "Gpu", "OpSys"]', '["Unnamed: 0"]', '["Order_Date"]', '[]', '["Price_outlier", "Is_Promotion", "Discount_Flag"]', '[{"columns": ["Inches", "Weight"], "type": "predictive", "strength": 0.886, "direction": "Inches \\u2192 Weight", "method": "custom_pps", "insight":  ... (2654 characters truncated) ... irection": "Cpu \\u2192 Memory", "insight": "Each Cpu belongs to exactly one Memory", "chart_suggestion": "treemap", "method": "hierarchy_detector"}]', '["Price", "Ram", "Inches", "Company", "TypeName", "ScreenResolution"]', 'Price', 'custom_pps', np.float64(0.82), 15, None)
+2026-03-24 19:09:43 - sqlalchemy.engine.Engine - INFO - SELECT column_analysis.id, column_analysis.dataset_id, column_analysis.metrics, column_analysis.dimensions, column_analysis.identifiers, column_analysis.temporal, column_analysis.geographic, column_analysis.other, column_analysis.relationships, column_analysis.dashboard_columns, column_analysis.primary_metric, column_analysis.analysis_method, column_analysis.confidence_score, column_analysis.total_relationships, column_analysis.created_at, column_analysis.updated_at 
+FROM column_analysis 
+WHERE column_analysis.id = $1::INTEGER
+2026-03-24 19:09:43 - sqlalchemy.engine.Engine - INFO - [cached since 927.7s ago] (52,)
+2026-03-24 19:09:43 - app.repositories.analysis_repository - INFO - Created analysis 52 for dataset 25
+2026-03-24 19:09:43 - sqlalchemy.engine.Engine - INFO - COMMIT
+2026-03-24 19:09:43 - app.api.v1.routes.analysis - INFO - Analysis saved for dataset 25: 15 relationships
+2026-03-24 19:28:35 - root - INFO - Shutting down...
+2026-03-24 19:28:36 - app.core.database - INFO - Database connection closed
+2026-03-24 19:28:37 - app.core.cache - INFO - Redis connection closed

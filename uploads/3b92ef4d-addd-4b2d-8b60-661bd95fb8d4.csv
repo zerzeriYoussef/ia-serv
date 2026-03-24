@@ -1,0 +1,16 @@
+employee_id,age,department,years_experience,salary,performance_score,promotion_last_year,left_company
+E1001,28,Sales,3,45000,72,No,No
+E1002,45,Engineering,20,95000,91,Yes,No
+E1003,32,Marketing,6,52000,68,No,Yes
+E1004,51,Engineering,25,110000,94,Yes,No
+E1005,26,Sales,2,38000,58,No,Yes
+E1006,38,HR,10,58000,76,No,No
+E1007,42,Engineering,15,87000,88,Yes,No
+E1008,29,Marketing,4,47000,71,No,No
+E1009,35,Sales,8,62000,79,Yes,No
+E1010,48,HR,18,65000,82,No,Yes
+E1011,31,Engineering,7,78000,85,No,No
+E1012,27,Sales,1,34000,52,No,Yes
+E1013,44,Marketing,16,72000,86,Yes,No
+E1014,36,HR,9,55000,73,No,No
+E1015,53,Engineering,28,115000,96,Yes,No

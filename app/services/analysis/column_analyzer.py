@@ -7,6 +7,7 @@ import pandas as pd
 import numpy as np
 from typing import Dict, List
 import logging
+import re
 
 from app.services.analysis.custom_pps import CustomPPS
 from app.services.analysis.relationship_detector import RelationshipDetector
@@ -15,6 +16,13 @@ logger = logging.getLogger(__name__)
 
 
 class ColumnAnalyzer:
+    HELPER_METRIC_PATTERNS = re.compile(
+        r"(outlier|^is_|^has_|flag|indicator|dummy|onehot|encoded)",
+        re.IGNORECASE,
+    )
+
+    INDEX_LIKE_PATTERNS = re.compile(r"^(unnamed:?\s*\d+|index|row_?id)$", re.IGNORECASE)
+
     """
     Intelligent column analysis using modern libraries
     
@@ -96,7 +104,11 @@ class ColumnAnalyzer:
             if self._is_identifier(col):
                 categories["identifiers"].append(col)
             
-            # Temporal (dates)
+            # Binary flags / helper columns → "other" (before temporal/metric checks)
+            elif self._is_binary_flag(col):
+                categories["other"].append(col)
+            
+            # Temporal (dates) — must actually parse as dates
             elif pd.api.types.is_datetime64_any_dtype(dtype) or self._is_date_column(col):
                 categories["temporal"].append(col)
             
@@ -104,8 +116,8 @@ class ColumnAnalyzer:
             elif self._is_geographic(col):
                 categories["geographic"].append(col)
             
-            # Metrics (numeric, not ID)
-            elif pd.api.types.is_numeric_dtype(dtype):
+            # Metrics (numeric, not ID, not helper flags)
+            elif pd.api.types.is_numeric_dtype(dtype) and self._is_metric_candidate(col):
                 categories["metrics"].append(col)
             
             # Dimensions (categorical with reasonable cardinality)
@@ -127,26 +139,115 @@ class ColumnAnalyzer:
 
         return RelationshipDetector._is_identifier(self.df, col)
     
-    def _is_date_column(self, col: str) -> bool:
-        """Check if column contains dates"""
+    def _is_binary_flag(self, col: str) -> bool:
+        """Check if column is a binary flag / boolean indicator.
+        
+        Catches columns like Is_Promotion, Discount_Flag, Price_outlier, etc.
+        that should NOT be treated as metrics or temporal columns.
+        """
         col_lower = col.lower()
         
-        # Name patterns
-        date_patterns = ['date', 'time', 'timestamp', 'created', 'updated', 
-                        'day', 'month', 'year', 'dt']
-        if any(pattern in col_lower for pattern in date_patterns):
+        # Name-based detection for flag/boolean patterns
+        flag_patterns = re.compile(
+            r"(^is_|^has_|_flag$|_indicator$|_outlier$|outlier|^flag_|_dummy$|_bool$|^bool_)",
+            re.IGNORECASE,
+        )
+        if flag_patterns.search(col_lower):
             return True
         
-        # Try parsing sample
-        try:
-            sample = self.df[col].dropna().head(100)
-            if len(sample) > 0:
-                pd.to_datetime(sample)
+        # Value-based detection: only {0, 1} or {True, False} or {Yes, No}
+        series = self.df[col].dropna()
+        if series.empty:
+            return False
+        
+        unique_vals = set(series.unique().tolist())
+        
+        # Numeric binary: exactly {0, 1} (or subset)
+        if pd.api.types.is_numeric_dtype(self.df[col]):
+            numeric_vals = set(pd.to_numeric(series, errors="coerce").dropna().unique().tolist())
+            if len(numeric_vals) <= 2 and numeric_vals.issubset({0, 1, 0.0, 1.0}):
                 return True
-        except:
-            pass
+        
+        # String binary: True/False, Yes/No, Y/N
+        if pd.api.types.is_object_dtype(self.df[col]):
+            str_vals = {str(v).strip().lower() for v in unique_vals}
+            binary_sets = [
+                {'true', 'false'}, {'yes', 'no'}, {'y', 'n'},
+                {'0', '1'}, {'t', 'f'},
+            ]
+            if len(str_vals) <= 2 and any(str_vals.issubset(bs) for bs in binary_sets):
+                return True
         
         return False
+
+    def _is_date_column(self, col: str) -> bool:
+        """Check if column contains dates.
+        
+        Rules:
+        - Never classify numeric dtype columns as dates (Price, Ram, etc.)
+        - Require BOTH a date-like name AND successful date parsing, or
+          very high date-parsing success rate (>90%) even without name match.
+        """
+        col_lower = col.lower()
+
+        # Ignore obvious index-like columns
+        if self.INDEX_LIKE_PATTERNS.search(col_lower):
+            return False
+        
+        # NEVER classify numeric columns as dates
+        if pd.api.types.is_numeric_dtype(self.df[col]):
+            return False
+        
+        # Name patterns
+        date_patterns = ['date', 'time', 'timestamp', 'created', 'updated',
+                        'datetime', 'period']
+        has_date_name = any(pattern in col_lower for pattern in date_patterns)
+        
+        # Try parsing sample values
+        parses_as_date = False
+        try:
+            sample = self.df[col].dropna().head(200)
+            if len(sample) > 0:
+                parsed = pd.to_datetime(sample, errors="coerce")
+                valid_ratio = parsed.notna().mean()
+                if valid_ratio >= 0.7:
+                    parses_as_date = True
+        except Exception:
+            pass
+
+        # Require BOTH name + parsing, or very strong parsing alone
+        if has_date_name and parses_as_date:
+            return True
+        
+        # Even without name match, if >90% parse as dates it's a date column
+        if parses_as_date:
+            try:
+                sample = self.df[col].dropna().head(200)
+                parsed = pd.to_datetime(sample, errors="coerce")
+                if parsed.notna().mean() >= 0.9:
+                    return True
+            except Exception:
+                pass
+        
+        return False
+
+    def _is_metric_candidate(self, col: str) -> bool:
+        """Filter out helper/index/binary numeric columns from KPI metrics."""
+        col_lower = col.lower()
+        if self.INDEX_LIKE_PATTERNS.search(col_lower):
+            return False
+        if self.HELPER_METRIC_PATTERNS.search(col_lower):
+            return False
+
+        series = pd.to_numeric(self.df[col], errors="coerce").dropna()
+        if series.empty:
+            return False
+
+        # Exclude boolean-like numeric columns (0/1 style).
+        unique_vals = set(series.unique().tolist())
+        if len(unique_vals) <= 2 and unique_vals.issubset({0, 1}):
+            return False
+        return True
     
     def _is_geographic(self, col: str) -> bool:
         """Check if column is geographic"""
@@ -181,6 +282,26 @@ class ColumnAnalyzer:
         
         return False
     
+    def _get_noise_columns(self) -> List[str]:
+        """Identify columns that should be excluded from relationship detection.
+        
+        These are columns that create noise:
+        - Helper/derived columns (outlier flags, binary indicators)
+        - Columns in the 'other' category that are binary flags
+        """
+        noise_cols = []
+        
+        for col in self.df.columns:
+            col_lower = col.lower()
+            # Exclude helper metrics (outlier flags, indicators, etc.)
+            if self.HELPER_METRIC_PATTERNS.search(col_lower):
+                noise_cols.append(col)
+            # Exclude binary flags that ended up in 'other'
+            elif self._is_binary_flag(col):
+                noise_cols.append(col)
+        
+        return list(set(noise_cols))
+
     def _detect_relationships(self) -> List[Dict]:
         """
         Detect relationships using CustomPPS
@@ -189,9 +310,13 @@ class ColumnAnalyzer:
         
         logger.info("Detecting relationships with CustomPPS...")
 
-        # Exclude identifier-like columns (e.g. customer_id) from PPS analysis
+        # Exclude identifier-like columns AND noise/helper columns from PPS analysis
         id_cols = self.column_types.get("identifiers", [])
-        df_for_pps = self.df.drop(columns=id_cols, errors="ignore")
+        noise_cols = self._get_noise_columns()
+        exclude_cols = list(set(id_cols + noise_cols))
+        
+        logger.info(f"Excluding from PPS: {exclude_cols}")
+        df_for_pps = self.df.drop(columns=exclude_cols, errors="ignore")
 
         if df_for_pps.shape[1] < 2:
             logger.info("Not enough non-identifier columns for PPS analysis")
@@ -226,6 +351,12 @@ class ColumnAnalyzer:
         """Get correlation matrix (fast, numeric only)"""
         
         numeric_df = self.df.select_dtypes(include=['number'])
+        
+        # Exclude noise columns from correlations too
+        noise_cols = self._get_noise_columns()
+        id_cols = self.column_types.get("identifiers", [])
+        exclude_cols = list(set(noise_cols + id_cols))
+        numeric_df = numeric_df.drop(columns=[c for c in exclude_cols if c in numeric_df.columns], errors="ignore")
         
         if len(numeric_df.columns) < 2:
             return []
@@ -328,14 +459,32 @@ class ColumnAnalyzer:
             'revenue', 'sales', 'profit', 'income', 'amount',
             'total', 'value', 'price', 'cost', 'earnings'
         ]
-        
+
+        best_metric = None
+        best_score = -1.0
         for metric in self.column_types["metrics"]:
             metric_lower = metric.lower()
+            series = pd.to_numeric(self.df[metric], errors="coerce")
+            non_null = series.dropna()
+            if non_null.empty:
+                continue
+
+            # Weighted score for business-friendly KPI selection.
+            score = 0.0
             if any(name in metric_lower for name in priority_names):
-                return metric
-        
-        # Default: first metric
-        return self.column_types["metrics"][0]
+                score += 3.0
+            if self.HELPER_METRIC_PATTERNS.search(metric_lower):
+                score -= 3.0
+            valid_ratio = non_null.shape[0] / max(len(series), 1)
+            score += valid_ratio
+            score += min(float(non_null.nunique()) / max(len(non_null), 1), 1.0)
+            score += min(float(non_null.var() if non_null.var() > 0 else 0.0), 1.0)
+
+            if score > best_score:
+                best_score = score
+                best_metric = metric
+
+        return best_metric or self.column_types["metrics"][0]
     
     def _calculate_confidence(self, relationships: List[Dict]) -> float:
         """Calculate overall confidence score"""

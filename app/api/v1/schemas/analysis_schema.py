@@ -2,6 +2,8 @@
 Pydantic schemas for column analysis API
 """
 
+from __future__ import annotations
+
 from pydantic import BaseModel, Field
 from typing import List, Dict, Optional
 from datetime import datetime
@@ -38,6 +40,7 @@ class AnalysisResultSchema(BaseModel):
     dashboard_columns: List[str]
     column_categories: ColumnCategoriesSchema
     primary_metric: Optional[str]
+    kpi: Optional["KPIResponseSchema"] = None
     confidence_score: float = Field(..., ge=0, le=1)
     total_relationships: int
     created_at: datetime
@@ -119,3 +122,42 @@ class StatisticalAnalyticsResponseSchema(BaseModel):
 
     per_dataset: List[PerDatasetStatisticalResultSchema]
     merged: Optional[MergedStatisticalBlockSchema] = None
+
+
+class KPIPrimarySchema(BaseModel):
+    name: str
+    aggregation: str
+    value: float
+
+
+class KPICardSchema(BaseModel):
+    name: str
+    value: float | int
+
+
+class KPITrendPointSchema(BaseModel):
+    period: str
+    value: float
+
+
+class KPITrendSchema(BaseModel):
+    time_column: str
+    granularity: str
+    series: List[KPITrendPointSchema] = Field(default_factory=list)
+
+
+class KPIDimensionValueSchema(BaseModel):
+    key: str
+    value: float
+
+
+class KPIDimensionTopNSchema(BaseModel):
+    dimension: str
+    top_n: List[KPIDimensionValueSchema] = Field(default_factory=list)
+
+
+class KPIResponseSchema(BaseModel):
+    primary: KPIPrimarySchema
+    cards: List[KPICardSchema] = Field(default_factory=list)
+    trend: Optional[KPITrendSchema] = None
+    by_dimension: List[KPIDimensionTopNSchema] = Field(default_factory=list)
