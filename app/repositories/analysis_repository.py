@@ -44,7 +44,9 @@ class AnalysisRepository:
             select(ColumnAnalysis)
             .where(ColumnAnalysis.dataset_id == dataset_id)
             .order_by(ColumnAnalysis.created_at.desc())
+            .limit(1)
         )
+        # first() avoids MultipleResultsFound if legacy DB has duplicate rows
         return result.scalars().first()
     
     @staticmethod

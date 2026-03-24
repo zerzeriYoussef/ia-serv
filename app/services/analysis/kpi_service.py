@@ -1,5 +1,5 @@
 """
-Deterministic KPI computation helpers.
+Deterministic KPI computation helpers for analysis responses.
 """
 
 from __future__ import annotations
@@ -22,6 +22,11 @@ def build_kpi_block(
     dimension_columns: Optional[List[str]],
     top_n: int = 10,
 ) -> Optional[Dict[str, Any]]:
+    """
+    Build KPI payload from dataframe + detected analysis columns.
+
+    Returns None when no usable primary metric exists.
+    """
     if not primary_metric or primary_metric not in df.columns:
         return None
 
@@ -44,7 +49,7 @@ def build_kpi_block(
         "by_dimension": [],
     }
 
-    # Trend from the first valid temporal column only.
+    # Trend: first temporal column with enough valid parse ratio, monthly sum
     temporal_columns = temporal_columns or []
     for time_col in temporal_columns:
         if time_col not in df.columns:
@@ -54,7 +59,9 @@ def build_kpi_block(
         if valid_ratio < 0.7:
             continue
 
-        trend_df = pd.DataFrame({"period": parsed_time.dt.to_period("M"), "metric": metric}).dropna()
+        trend_df = pd.DataFrame(
+            {"period": parsed_time.dt.to_period("M"), "metric": metric}
+        ).dropna()
         if trend_df.empty:
             continue
         grouped = trend_df.groupby("period", as_index=False)["metric"].sum()
@@ -77,16 +84,21 @@ def build_kpi_block(
         dim_df = pd.DataFrame({"dim": df[dim_col], "metric": metric}).dropna()
         if dim_df.empty:
             continue
-        grouped = dim_df.groupby("dim", as_index=True)["metric"].sum().sort_values(ascending=False).head(top_n)
+        grouped = (
+            dim_df.groupby("dim", as_index=True)["metric"]
+            .sum()
+            .sort_values(ascending=False)
+            .head(top_n)
+        )
         result["by_dimension"].append(
             {
                 "dimension": dim_col,
                 "top_n": [
-                    {"key": str(key), "value": _to_float(value)} for key, value in grouped.items()
+                    {"key": str(key), "value": _to_float(value)}
+                    for key, value in grouped.items()
                 ],
             }
         )
         break
 
     return result
-
