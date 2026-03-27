@@ -34,7 +34,21 @@ class CleaningService:
         
         df_clean = df.copy()
         
-        # 1. Handle missing values
+        # 1. Text cleaning (should be done early to strip whitespace before type conversion)
+        if profile.get("strip_whitespace", False):
+            df_clean = CleaningService._clean_text(
+                df_clean,
+                standardize=profile.get("standardize_text", False)
+            )
+            report["operations"].append("text_cleaning")
+            
+        # 2. Fix data types (must be done before missing values to know true types)
+        if profile.get("fix_data_types", False):
+            df_clean, type_report = CleaningService._fix_data_types(df_clean)
+            report["operations"].append("data_types")
+            report["changes"]["data_types"] = type_report
+            
+        # 3. Handle missing values
         if profile.get("handle_missing"):
             df_clean, missing_report = CleaningService._handle_missing(
                 df_clean,
@@ -45,7 +59,7 @@ class CleaningService:
             report["operations"].append("missing_values")
             report["changes"]["missing_values"] = missing_report
         
-        # 2. Remove duplicates
+        # 4. Remove duplicates
         if profile.get("remove_duplicates", False):
             df_clean, dup_report = CleaningService._remove_duplicates(
                 df_clean,
@@ -54,13 +68,7 @@ class CleaningService:
             report["operations"].append("duplicates")
             report["changes"]["duplicates"] = dup_report
         
-        # 3. Fix data types
-        if profile.get("fix_data_types", False):
-            df_clean, type_report = CleaningService._fix_data_types(df_clean)
-            report["operations"].append("data_types")
-            report["changes"]["data_types"] = type_report
-        
-        # 4. Detect/handle outliers
+        # 5. Detect/handle outliers
         if profile.get("detect_outliers", False):
             df_clean, outlier_report = CleaningService._handle_outliers(
                 df_clean,
@@ -70,14 +78,6 @@ class CleaningService:
             )
             report["operations"].append("outliers")
             report["changes"]["outliers"] = outlier_report
-        
-        # 5. Text cleaning
-        if profile.get("strip_whitespace", False):
-            df_clean = CleaningService._clean_text(
-                df_clean,
-                standardize=profile.get("standardize_text", False)
-            )
-            report["operations"].append("text_cleaning")
         
         # 6. Date standardization
         if profile.get("standardize_dates", False):
@@ -117,22 +117,35 @@ class CleaningService:
                     if pd.api.types.is_numeric_dtype(df_clean[col]):
                         # Numeric columns
                         if fill_strategy == "mean":
-                            df_clean[col].fillna(df_clean[col].mean(), inplace=True)
+                            df_clean[col] = df_clean[col].fillna(df_clean[col].mean())
                         elif fill_strategy == "median":
-                            df_clean[col].fillna(df_clean[col].median(), inplace=True)
+                            df_clean[col] = df_clean[col].fillna(df_clean[col].median())
                         elif fill_strategy == "mode":
-                            df_clean[col].fillna(df_clean[col].mode()[0], inplace=True)
+                            df_clean[col] = df_clean[col].fillna(df_clean[col].mode()[0])
                         elif fill_strategy == "constant":
-                            df_clean[col].fillna(float(fill_value) if fill_value else 0, inplace=True)
+                            df_clean[col] = df_clean[col].fillna(float(fill_value) if fill_value else 0)
                     
-                    else:
-                        # Non-numeric columns
+                    elif pd.api.types.is_datetime64_any_dtype(df_clean[col]):
+                        # Datetime columns
                         if fill_strategy == "mode":
-                            df_clean[col].fillna(df_clean[col].mode()[0], inplace=True)
-                        elif fill_strategy == "constant":
-                            df_clean[col].fillna(fill_value if fill_value else "Unknown", inplace=True)
+                            df_clean[col] = df_clean[col].fillna(df_clean[col].mode()[0])
+                        elif fill_strategy == "constant" and fill_value:
+                            try:
+                                df_clean[col] = df_clean[col].fillna(pd.to_datetime(fill_value))
+                            except (ValueError, TypeError):
+                                pass  # leave na if invalid
                         else:
-                            df_clean[col].fillna("Unknown", inplace=True)
+                            # Cannot reliably default-fill datetimes without domain context
+                            pass
+                            
+                    else:
+                        # Non-numeric string/categorical columns
+                        if fill_strategy == "mode":
+                            df_clean[col] = df_clean[col].fillna(df_clean[col].mode()[0])
+                        elif fill_strategy == "constant":
+                            df_clean[col] = df_clean[col].fillna(fill_value if fill_value else "Unknown")
+                        else:
+                            df_clean[col] = df_clean[col].fillna("Unknown")
         
         elif strategy == "interpolate":
             df_clean = df.copy()
@@ -140,7 +153,7 @@ class CleaningService:
             numeric_cols = df_clean.select_dtypes(include=['number']).columns
             df_clean[numeric_cols] = df_clean[numeric_cols].interpolate()
             # Fill remaining with mode or constant
-            df_clean = df_clean.fillna(method='ffill').fillna(method='bfill')
+            df_clean = df_clean.ffill().bfill()
         
         else:
             df_clean = df.copy()
@@ -182,7 +195,7 @@ class CleaningService:
     
     @staticmethod
     def _fix_data_types(df: pd.DataFrame) -> Tuple[pd.DataFrame, Dict]:
-        """Auto-detect and fix data types"""
+        """Auto-detect and fix data types by coercing gracefully"""
         
         df_clean = df.copy()
         type_changes = {}
@@ -190,27 +203,36 @@ class CleaningService:
         for col in df_clean.columns:
             original_type = str(df_clean[col].dtype)
             
-            # Try to convert to numeric
             if df_clean[col].dtype == 'object':
-                try:
-                    df_clean[col] = pd.to_numeric(df_clean[col])
+                non_na = df_clean[col].dropna()
+                if len(non_na) == 0:
+                    continue
+                    
+                # 1. Try to convert to numeric gracefully
+                num_coerced = pd.to_numeric(non_na, errors='coerce')
+                num_success_rate = num_coerced.notna().mean()
+                
+                # If more than 30% of non-null values are numbers, treat as numeric column
+                if num_success_rate > 0.3:
+                    df_clean[col] = pd.to_numeric(df_clean[col], errors='coerce')
                     type_changes[col] = {
                         "from": original_type,
                         "to": str(df_clean[col].dtype)
                     }
-                except (ValueError, TypeError):
-                    pass
-            
-            # Try to convert to datetime
-            if df_clean[col].dtype == 'object':
-                try:
-                    df_clean[col] = pd.to_datetime(df_clean[col])
+                    continue
+                
+                # 2. Try to convert to datetime gracefully
+                date_coerced = pd.to_datetime(non_na, errors='coerce')
+                date_success_rate = date_coerced.notna().mean()
+                
+                # If more than 30% of non-null values are valid dates, treat as datetime column
+                if date_success_rate > 0.3:
+                    df_clean[col] = pd.to_datetime(df_clean[col], errors='coerce')
                     type_changes[col] = {
                         "from": original_type,
-                        "to": "datetime64[ns]"
+                        "to": "datetime64[ns]" # standardized date representation
                     }
-                except (ValueError, TypeError):
-                    pass
+                    continue
         
         report = {
             "types_changed": len(type_changes),
@@ -269,6 +291,13 @@ class CleaningService:
                     if method == "iqr":
                         df_clean.loc[outlier_mask & (df_clean[col] < lower_bound), col] = lower_bound
                         df_clean.loc[outlier_mask & (df_clean[col] > upper_bound), col] = upper_bound
+                    elif method == "zscore":
+                        mean_val = df_clean[col].mean()
+                        std_val = df_clean[col].std()
+                        lower_bound_z = mean_val - threshold * std_val
+                        upper_bound_z = mean_val + threshold * std_val
+                        df_clean.loc[outlier_mask & (df_clean[col] < lower_bound_z), col] = lower_bound_z
+                        df_clean.loc[outlier_mask & (df_clean[col] > upper_bound_z), col] = upper_bound_z
                 
                 elif action == "flag":
                     # Add a flag column

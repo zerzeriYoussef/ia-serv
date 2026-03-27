@@ -22,6 +22,7 @@ from app.api.v1.schemas.cleaning_schema import (
     CleaningReportResponse,
     DataQualityResponse
 )
+from app.api.dependencies.auth import CurrentUser, require_auth, require_admin
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +47,8 @@ def _to_native_types(obj):
 @router.post("/cleaning-profiles", response_model=CleaningProfileResponse)
 async def create_cleaning_profile(
     profile: CleaningProfileCreate,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(require_auth)
 ):
     """Create a new cleaning profile"""
     
@@ -61,7 +63,10 @@ async def create_cleaning_profile(
 
 
 @router.get("/cleaning-profiles", response_model=List[CleaningProfileResponse])
-async def list_cleaning_profiles(db: AsyncSession = Depends(get_db)):
+async def list_cleaning_profiles(
+    db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(require_auth)
+):
     """List all cleaning profiles"""
     profiles = await CleaningProfileRepository.get_all(db)
     return profiles
@@ -70,7 +75,8 @@ async def list_cleaning_profiles(db: AsyncSession = Depends(get_db)):
 @router.get("/cleaning-profiles/{profile_id}", response_model=CleaningProfileResponse)
 async def get_cleaning_profile(
     profile_id: int,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(require_auth)
 ):
     """Get cleaning profile by ID"""
     profile = await CleaningProfileRepository.get_by_id(db, profile_id)
@@ -87,7 +93,8 @@ async def get_cleaning_profile(
 @router.delete("/cleaning-profiles/{profile_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_cleaning_profile(
     profile_id: int,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(require_auth)
 ):
     """Delete cleaning profile"""
     deleted = await CleaningProfileRepository.delete(db, profile_id)
@@ -106,7 +113,8 @@ async def clean_dataset(
     dataset_id: int,
     profile_id: Optional[int] = None,
     save_as_new: bool = False,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(require_auth)
 ):
     """
     Clean a dataset using a cleaning profile
@@ -121,6 +129,17 @@ async def clean_dataset(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Dataset {dataset_id} not found"
+        )
+    
+    # Check ownership
+    if not current_user.is_admin and dataset.user_id != current_user.user_id:
+        logger.warning(
+            "Forbidden: user_id=%s tried to clean dataset %s owned by user_id=%s",
+            current_user.user_id, dataset_id, dataset.user_id
+        )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have access to this dataset"
         )
     
     # Get cleaning profile
@@ -190,6 +209,7 @@ async def clean_dataset(
             row_count=len(df_clean),
             column_count=len(df_clean.columns),
             columns=df_clean.columns.tolist(),
+            user_id=current_user.user_id,
             status="processed"
         )
         
@@ -236,7 +256,8 @@ async def clean_dataset(
 @router.get("/datasets/{dataset_id}/quality", response_model=DataQualityResponse)
 async def get_data_quality(
     dataset_id: int,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(require_auth)
 ):
     """Get data quality report for a dataset"""
     
@@ -246,6 +267,13 @@ async def get_data_quality(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Dataset {dataset_id} not found"
+        )
+    
+    # Check ownership
+    if not current_user.is_admin and dataset.user_id != current_user.user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have access to this dataset"
         )
     
     # Load data
@@ -290,9 +318,25 @@ async def get_data_quality(
 @router.get("/datasets/{dataset_id}/cleaning-history", response_model=List[CleaningReportResponse])
 async def get_cleaning_history(
     dataset_id: int,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(require_auth)
 ):
     """Get cleaning history for a dataset"""
+
+    # Get dataset for ownership check
+    dataset = await DatasetRepository.get_by_id(db, dataset_id)
+    if not dataset:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Dataset {dataset_id} not found"
+        )
+
+    # Check ownership
+    if not current_user.is_admin and dataset.user_id != current_user.user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have access to this dataset"
+        )
     
     logs = await CleaningLogRepository.get_by_dataset(db, dataset_id)
     return logs
@@ -303,7 +347,8 @@ async def get_cleaning_history(
 @router.post("/datasets/{dataset_id}/validate")
 async def validate_dataset(
     dataset_id: int,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(require_auth)
 ):
     """Validate dataset against default rules"""
     
@@ -313,6 +358,13 @@ async def validate_dataset(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Dataset {dataset_id} not found"
+        )
+    
+    # Check ownership
+    if not current_user.is_admin and dataset.user_id != current_user.user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have access to this dataset"
         )
     
     # Load data

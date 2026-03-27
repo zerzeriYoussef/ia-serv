@@ -1,0 +1,36 @@
+id,name,email,age,salary,join_date,department,status,notes,age_outlier,salary_outlier
+1,John Doe,john.doe@email.com,25.0,50000.0,2023-01-15,Engineering,Active,Unknown,False,False
+3,Bob Johnson,bob.johnson@email,42.0,75000.5,2023-03-10,Sales,Inactive,Unknown,False,False
+4,Alice Williams,alice.w@email.com,-5.0,82000.0,2023-04-05,Engineering,Active,top performer,True,False
+5,Charlie Brown,charlie.b@email.com,35.0,0.0,2023-05-12,Marketing,Terminated,Unknown,False,True
+6,Diana Prince,diana.p@email.com,28.0,95000.0,,IT,Active,Unknown,False,False
+7,Unknown,Unknown,29.0,68000.0,2023-07-22,HR,Active,missing name and email,False,False
+8,Frank Castle,frank.c@email.com,63.87878787878788,70545.49969696971,2023-08-30,Security,Active,Unknown,True,False
+9,Grace Lee,grace.lee@email.com,45.0,77000.99,2023-09-14,Unknown,Inactive,Unknown,False,False
+10,Henry Ford,henry.f@email.com,52.0,70545.49969696971,2023-10-01,Manufacturing,Active,missing salary,False,False
+12,Jack Wilson,jack.w@email,27.0,72000.0,2023-12-03,Sales,Unknown,empty status,False,False
+13,Karen White,karen.white@email.com,120.0,110000.0,2024-01-08,Executive,Active,outlier age,True,False
+14,Leo Martinez,leo.m@email.com,33.0,67000.0,2024-01-15,IT,Active,trailing spaces,False,False
+15,Mia Taylor,1245,29.0,54000.0,2024-01-20,Marketing,Inactive,invalid email format,False,False
+16,Noah Anderson,noah.a@email.com,41.0,91000.0,2024-01-25,Engineering,Active,duplicate email?,False,False
+17,Olivia Thomas,olivia.t@email.com,38.0,84000.0,2024-01-30,HR,Active,Unknown,False,False
+18,Peter Parker,peter.p@email.com,23.0,47000.0,2024-02-01,IT,Probation,Unknown,False,False
+19,Quinn Lee,quinn.lee@email.com,36.0,73000.0,2024-02-05,Unknown,Active,empty department,False,False
+21,Sam Smith,john.doe@email.com,29.0,62000.0,2024-02-15,Sales,Active,duplicate email,False,False
+22,Tina Fey,tina.f@email.com,63.87878787878788,81000.0,2024-02-18,Engineering,Active,missing age,True,False
+24,Vera Wang,vera.w@email.com,37.0,86000.0,2024-02-25,Design,Active,Unknown,False,False
+25,Will Smith,will.s@email.com,44.0,105000.0,2024-02-28,Executive,Active,Unknown,False,False
+26,Xena Warrior,xena.w@email,32.0,78000.0,2024-03-01,Security,Active,missing .com,False,False
+27,Yara Shahidi,yara.s@email.com,26.0,59000.0,2024-03-05,Marketing,Active,Unknown,False,False
+28,Zack Morris,zack.m@email.com,34.0,69000.0,2024-03-10,Sales,Terminated,Unknown,False,False
+30,Ben Cooper,ben.c@email.com,31.0,71000.0,2024-03-15,IT,Active,duplicate row,False,False
+31,Ben Cooper,ben.c@email.com,31.0,71000.0,2024-03-15,IT,Active,duplicate row,False,False
+32,Chris Evans,chris.e@email.com,39.0,93000.0,2024-03-18,Engineering,Active,Unknown,False,False
+33,David Brown,david.b@email.com,999.0,45000.0,2024-03-20,Sales,Inactive,extreme outlier,True,False
+34,Emma Watson,emma.w@email.com,27.0,68000.0,,Marketing,Active,wrong date format,False,False
+35,Fiona Gallagher,fiona.g@email.com,34.0,79000.0,2024-03-22,Social Work,Active,Unknown,False,False
+36,George Jetson,george.j@email.com,41.0,88000.0,2024-03-23,Robotics,Active,Unknown,False,False
+37,Hannah Baker,hannah.b@email.com,17.0,32000.0,2024-03-24,Intern,Active,underage employee,False,True
+38,Ian Malcolm,ian.m@email.com,48.0,112000.0,2024-03-25,Consulting,Active,Unknown,False,False
+39,Jessica Jones,jessica.j@email.com,33.0,84000.0,2024-03-26,Private Security,Active,Unknown,False,False
+40,Kevin McCallister,kevin.m@email.com,8.0,0.0,2024-03-27,Unknown,Probation,child employee,True,True

@@ -3,6 +3,7 @@ import json
 from pathlib import Path
 from typing import Dict, List, Tuple, Optional
 import logging
+import csv
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +21,7 @@ class ParserService:
         try:
             # Parse based on file type
             if file_type == 'csv':
-                df = pd.read_csv(file_path)
+                df = ParserService._read_csv_robust(file_path)
             elif file_type in ['xlsx', 'xls']:
                 df = pd.read_excel(file_path)
             elif file_type == 'json':
@@ -40,6 +41,52 @@ class ParserService:
         except Exception as e:
             logger.error(f"Error parsing file: {e}")
             raise
+
+    @staticmethod
+    def _read_csv_robust(file_path: str) -> pd.DataFrame:
+        """
+        Read CSV files defensively.
+
+        Handles common real-world issues:
+        - Inconsistent number of fields on some rows
+        - Unknown delimiter
+        - Occasional malformed lines
+        """
+        # 1) Fast path
+        try:
+            return pd.read_csv(file_path)
+        except pd.errors.ParserError as e:
+            logger.warning(f"CSV parser error (fast path): {e}")
+
+        # 2) Try delimiter sniffing + python engine (more tolerant)
+        delimiter = None
+        try:
+            with open(file_path, "r", encoding="utf-8", errors="replace", newline="") as f:
+                sample = f.read(8192)
+            try:
+                delimiter = csv.Sniffer().sniff(sample, delimiters=[",", ";", "\t", "|"]).delimiter
+            except Exception:
+                delimiter = None
+        except Exception as e:
+            logger.warning(f"Failed to sniff CSV delimiter: {e}")
+
+        try:
+            return pd.read_csv(
+                file_path,
+                sep=delimiter,  # None means default ','
+                engine="python",
+                on_bad_lines="skip",
+            )
+        except Exception as e:
+            logger.warning(f"CSV parser error (python engine): {e}")
+
+        # 3) Last resort: try python engine with sep autodetection
+        return pd.read_csv(
+            file_path,
+            sep=None,
+            engine="python",
+            on_bad_lines="skip",
+        )
     
     @staticmethod
     def _extract_metadata(df: pd.DataFrame) -> Dict:

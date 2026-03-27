@@ -1,0 +1,25 @@
+transaction_id,order_date,customer_id,customer_name,email,product_id,product_name,category,quantity,unit_price,discount,total_amount,payment_method,shipping_address,delivery_status,notes,quantity_outlier,unit_price_outlier,discount_outlier,total_amount_outlier
+ORD-001,2024-01-15,CUST101,John Smith,john.smith@email.com,PROD-001,Wireless Mouse,Electronics,2.0,25.99,0.0,51.98,Credit Card,123 Main St,Delivered,Unknown,False,False,False,False
+ORD-002,,CUST102,Jane Doe,jane.d@email,PROD-002,Mechanical Keyboard,Electronics,1.0,89.99,10.0,80.99,PayPal,456 Oak Ave,Delivered,late delivery,False,False,False,False
+ORD-003,,CUST101,John Smith,john.smith@email.com,PROD-003,USB-C Cable,Accessories,-3.0,12.99,0.0,-38.97,Credit Card,123 Main St,Cancelled,negative quantity,True,False,False,False
+ORD-004,2024-01-17,CUST103,Bob Johnson,bob.j@email.com,PROD-004,"27"" Monitor",Electronics,1.0,249.99,15.0,212.49,Unknown,789 Pine Rd,Pending,Unknown,False,True,False,False
+ORD-005,,CUST104,Alice Williams,alice.w@email,PROD-001,Wireless Mouse,Electronics,0.0,25.99,0.0,0.0,Bitcoin,321 Elm St,Delivered,zero quantity,False,False,False,False
+ORD-006,2024-01-19,CUST105,Unknown,charlie.b@email.com,PROD-006,Laptop Stand,Accessories,1.0,45.99,20.0,36.79,PayPal,654 Maple Ave,Delivered,missing customer name,False,False,False,False
+ORD-007,2024-01-20,CUST106,Diana Prince,diana.p@email,PROD-007,Webcam,Electronics,1.0,79.99,0.0,79.99,Credit Card,987 Cedar Ln,Processing,Unknown,False,False,False,False
+ORD-008,,CUST107,Unknown,Unknown,PROD-008,Desk Lamp,Home Office,2.0,34.99,0.0,69.98,Cash,147 Birch St,Pending,missing email and name,False,False,False,False
+ORD-009,2024-01-22,CUST108,Frank Castle,invalid-email,PROD-009,Gaming Chair,Furniture,1.0,199.99,25.0,149.99,PayPal,258 Spruce Way,Delivered,Unknown,False,False,False,False
+ORD-010,2024-01-23,CUST109,Grace Lee,grace.lee@email.com,PROD-010,USB Hub,Accessories,999.0,24.99,0.0,24974.01,Credit Card,369 Walnut Ave,Processing,extreme quantity,True,False,False,True
+ORD-011,2024-01-24,CUST110,Henry Ford,henry.f@email.com,PROD-011,SSD 1TB,Storage,1.0,129.99,0.0,129.99,Unknown,741 Ash St,Shipped,Unknown,False,False,False,False
+ORD-013,,CUST112,Jack Wilson,jack.w@email,PROD-001,Wireless Mouse,Electronics,1.0,25.99,0.0,25.99,Credit Card,963 Beech Rd,Returned,Unknown,False,False,False,False
+ORD-014,2024-01-27,CUST113,Karen White,karen.white@email.com,PROD-013,Monitor Arm,Accessories,-1.0,59.99,0.0,-59.99,PayPal,159 Willow Way,Refunded,negative quantity,True,False,False,False
+ORD-015,2024-01-28,CUST114,Leo Martinez,leo.m@email.com,PROD-014,Smart Light Bulb,Smart Home,3.0,19.99,10.0,53.97,Cash,753 Chestnut Ct,Delivered,trailing spaces,False,False,False,False
+ORD-016,2024-01-29,CUST115,Mia Taylor,mia.t@email,PROD-015,Phone Charger,Accessories,1.0,15.99,0.0,15.99,Credit Card,357 Sycamore St,Pending,invalid email,False,False,False,False
+ORD-017,2024-01-30,CUST116,Noah Anderson,noah.a@email.com,PROD-016,Noise Cancelling Headphones,Audio,1.0,149.99,0.0,149.99,PayPal,951 Magnolia Ln,Shipped,Unknown,False,False,False,False
+ORD-018,,CUST101,John Smith,john.smith@email.com,PROD-017,Wireless Earbuds,Audio,2.0,79.99,15.0,135.98,Credit Card,123 Main St,Delivered,repeat customer,False,False,False,False
+ORD-019,2024-02-01,CUST117,Olivia Thomas,olivia.t@email.com,PROD-018,External Hard Drive,Storage,1.0,99.99,0.0,99.99,Unknown,654 Holly Rd,Processing,missing payment,False,False,False,False
+ORD-020,2024-02-02,CUST118,Peter Parker,peter.p@email.com,PROD-019,Smart Watch,Wearables,1.0,299.99,50.0,149.99,PayPal,852 Fir Ave,Shipped,high discount,False,True,True,False
+ORD-022,,CUST120,Rachel Green,rachel.g@email.com,PROD-001,Wireless Mouse,Electronics,5.0,25.99,5.0,123.45,PayPal,753 Oak Rd,Pending,bulk order,True,False,False,False
+ORD-023,2024-02-05,CUST121,Sam Smith,sam.s@email.com,PROD-021,Printer,Office,1.0,149.99,0.0,149.99,Bitcoin,951 Maple Ave,Delivered,crypto payment,False,False,False,False
+ORD-025,2024-02-07,CUST123,Umar Khan,PROD-023,Desk Mat,Accessories,1,29.99,0.0,29.99,1162.720434782609,753 Cedar Dr,Processing,missing email,Unknown,True,False,True,True
+ORD-028,2024-02-10,CUST126,Xena Warrior,xena.w@email,PROD-026,Gaming Mouse,Electronics,1.0,59.99,0.0,59.99,Credit Card,369 Poplar Rd,Pending,invalid domain,False,False,False,False
+ORD-029,2024-02-11,CUST127,Yara Shahidi,Unknown,PROD-027,Microphone,Audio,1.0,89.99,0.0,89.99,PayPal,741 Elm Dr,Delivered,missing email,False,False,False,False
