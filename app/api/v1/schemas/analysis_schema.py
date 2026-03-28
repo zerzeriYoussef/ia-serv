@@ -40,7 +40,6 @@ class AnalysisResultSchema(BaseModel):
     dashboard_columns: List[str]
     column_categories: ColumnCategoriesSchema
     primary_metric: Optional[str]
-    kpi: Optional["KPIResponseSchema"] = None
     confidence_score: float = Field(..., ge=0, le=1)
     total_relationships: int
     created_at: datetime

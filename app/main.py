@@ -10,6 +10,7 @@ from app.core.cache import init_redis, close_redis
 from app.core.logging import logger
 from app.api.v1.routes import upload
 from app.api.v1.routes import analysis
+from app.api.v1.routes import rag
 
 # Lifespan context manager for startup/shutdown events
 @asynccontextmanager
@@ -51,6 +52,7 @@ app.add_middleware(
 app.include_router(upload.router, prefix="/api/v1", tags=["Upload"])
 app.include_router(cleaning.router, prefix="/api/v1", tags=["Cleaning"])
 app.include_router(analysis.router, prefix="/api/v1", tags=["Analysis"])
+app.include_router(rag.router, prefix="/api/v1", tags=["RAG"])
 
 # Health check endpoint
 @app.get("/health")

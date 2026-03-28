@@ -36,6 +36,11 @@ class Settings(BaseSettings):
     
     # Logging
     LOG_LEVEL: str = "INFO"
+
+    # Gemini (RAG / insights). Optional — endpoints return 503 if missing when calling LLM.
+    GEMINI_API_KEY: Optional[str] = None
+    # Override via env if your project only exposes 1.5 models, e.g. gemini-1.5-flash
+    GEMINI_MODEL: str = "gemini-2.5-flash"
     
     class Config:  #i will later change setting above for better security
         env_file = ".env"

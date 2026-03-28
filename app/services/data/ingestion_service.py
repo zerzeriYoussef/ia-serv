@@ -46,7 +46,7 @@ class IngestionService:
     async def save_upload_file(self, upload_file: UploadFile) -> Tuple[str, str, int]:
         """
         Save uploaded file to disk
-        
+                                    
         Returns:
             Tuple of (unique_filename, file_path, file_size)
         """

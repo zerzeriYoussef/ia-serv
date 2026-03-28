@@ -23,8 +23,6 @@ from app.api.v1.schemas.analysis_schema import (
 from app.services.analysis.statistical_relationship_service import (
     run_multi_dataset_analytics,
 )
-from app.services.analysis.kpi_service import build_kpi_block
-
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
@@ -143,7 +141,6 @@ async def analyze_dataset(
                     "other": existing.other or []
                 },
                 "primary_metric": existing.primary_metric,
-                "kpi": kpi,
                 "confidence_score": existing.confidence_score,
                 "total_relationships": existing.total_relationships,
                 "created_at": existing.created_at
@@ -190,7 +187,6 @@ async def analyze_dataset(
         "dashboard_columns": results["dashboard_columns"],
         "column_categories": results["column_categories"],
         "primary_metric": results["primary_metric"],
-        "kpi": kpi,
         "confidence_score": results["confidence_score"],
         "total_relationships": len(results["relationships"]),
         "created_at": analysis.created_at
@@ -225,7 +221,6 @@ async def get_analysis(
             "other": analysis.other or []
         },
         "primary_metric": analysis.primary_metric,
-        "kpi": kpi,
         "confidence_score": analysis.confidence_score,
         "total_relationships": analysis.total_relationships,
         "created_at": analysis.created_at
