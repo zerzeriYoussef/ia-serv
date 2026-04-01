@@ -36,6 +36,8 @@ class AnalysisResultSchema(BaseModel):
     """Complete analysis result"""
     
     dataset_id: int
+    columns: Optional[List[str]] = None
+    column_types: Optional[Dict[str, str]] = None
     relationships: List[RelationshipSchema]
     dashboard_columns: List[str]
     column_categories: ColumnCategoriesSchema

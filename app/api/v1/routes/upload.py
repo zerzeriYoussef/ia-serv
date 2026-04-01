@@ -123,6 +123,9 @@ async def upload_file(
         user_id=current_user.user_id,
         status=DatasetStatus.UPLOADED,
     )
+    
+    # Explicitly commit here so that the background task can query the dataset row
+    await db.commit()
 
     background_tasks.add_task(process_file_background, dataset.id, file_path, file_type)
 

@@ -15,6 +15,7 @@ from app.core.database import Base
 from app.models.dataset import Dataset  # Import your models here
 from app.models.cleaning_profile import CleaningProfile, CleaningLog
 from app.models.column_analysis import ColumnAnalysis
+from app.models.dashboard import Dashboard
 # this is the Alembic Config object
 config = context.config
 

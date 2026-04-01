@@ -103,8 +103,9 @@ class ParserService:
         # Summary statistics for numeric columns
         numeric_cols = df.select_dtypes(include=['number']).columns
         if len(numeric_cols) > 0:
-            stats = df[numeric_cols].describe().to_dict()
-            metadata["summary_stats"] = stats
+            # Use to_json -> loads to ensure NaN->null and numpy types->native python types
+            stats_json = df[numeric_cols].describe().to_json(orient="columns")
+            metadata["summary_stats"] = json.loads(stats_json)
         else:
             metadata["summary_stats"] = {}
         
@@ -118,7 +119,7 @@ class ParserService:
         }
         
         # Memory usage
-        metadata["memory_usage_mb"] = df.memory_usage(deep=True).sum() / (1024 * 1024)
+        metadata["memory_usage_mb"] = float(df.memory_usage(deep=True).sum() / (1024 * 1024))
         
         return metadata
     

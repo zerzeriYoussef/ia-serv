@@ -10,7 +10,9 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.dashboard import Dashboard
 from app.repositories.analysis_repository import AnalysisRepository
+from app.repositories.dashboard_repository import DashboardRepository
 from app.repositories.dataset_repository import DatasetRepository
 from app.services.analysis.kpi_service import build_kpi_block
 from app.services.data.parser_service import ParserService
@@ -182,3 +184,34 @@ Rules:
     }
 
     return llm_payload, meta
+
+
+async def run_rag_insights_and_save(
+    db: AsyncSession,
+    dataset_id: int,
+    user_id: Optional[str] = None,
+    debug: bool = False,
+) -> Dashboard:
+    """
+    Run the full RAG pipeline and persist the result as a Dashboard row.
+
+    Returns the newly created Dashboard ORM object.
+    """
+    llm_payload, meta = await run_rag_insights(db, dataset_id)
+
+    # Resolve the analysis_id so the dashboard links back to its source analysis
+    analysis_row = await AnalysisRepository.get_by_dataset(db, dataset_id)
+    analysis_id = analysis_row.id if analysis_row else None
+
+    dashboard = await DashboardRepository.create(
+        db,
+        user_id=user_id,
+        dataset_id=dataset_id,
+        analysis_id=analysis_id,
+        executive_summary_kpis=llm_payload.get("executive_summary_kpis", []),
+        dashboard_charts=llm_payload.get("dashboard_charts", []),
+        rag_meta=meta.get("rag") if debug else None,
+    )
+    await db.commit()
+    await db.refresh(dashboard)
+    return dashboard

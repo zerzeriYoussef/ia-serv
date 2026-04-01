@@ -130,6 +130,8 @@ async def analyze_dataset(
             logger.info(f"Returning existing analysis for dataset {dataset_id}")
             return {
                 "dataset_id": existing.dataset_id,
+                "columns": dataset.columns,
+                "column_types": dataset.column_types,
                 "relationships": _normalize_relationships(existing.relationships),
                 "dashboard_columns": existing.dashboard_columns,
                 "column_categories": {
@@ -183,6 +185,8 @@ async def analyze_dataset(
     
     return {
         "dataset_id": dataset_id,
+        "columns": dataset.columns,
+        "column_types": dataset.column_types,
         "relationships": _normalize_relationships(results["relationships"]),
         "dashboard_columns": results["dashboard_columns"],
         "column_categories": results["column_categories"],
@@ -201,6 +205,7 @@ async def get_analysis(
     """Get existing analysis for dataset"""
     
     analysis = await AnalysisRepository.get_by_dataset(db, dataset_id)
+    dataset = await DatasetRepository.get_by_id(db, dataset_id)
     
     if not analysis:
         raise HTTPException(
@@ -210,6 +215,8 @@ async def get_analysis(
     
     return {
         "dataset_id": analysis.dataset_id,
+        "columns": dataset.columns if dataset else None,
+        "column_types": dataset.column_types if dataset else None,
         "relationships": _normalize_relationships(analysis.relationships),
         "dashboard_columns": analysis.dashboard_columns,
         "column_categories": {
