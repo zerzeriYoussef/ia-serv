@@ -18,6 +18,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.core.database import get_db
 from app.api.v1.schemas.rag_schema import (
+    ChartDataResponseSchema,
+    ChartMetadataSchema,
     DashboardChartItemSchema,
     DashboardExecuteResponseSchema,
     DashboardSchema,
@@ -268,16 +270,99 @@ async def execute_dashboard(
             detail=f"Could not parse dataset file: {e!s}",
         ) from e
 
-    # Execute KPIs and charts
+    # Execute KPIs (still returned in full)
     executor = KPIExecutor(df)
+    kpi_results = executor.execute_all_kpis(dashboard.executive_summary_kpis or [])
 
-    kpi_results   = executor.execute_all_kpis(dashboard.executive_summary_kpis or [])
-    chart_results = executor.execute_all_charts(dashboard.dashboard_charts or [])
+    # Execute charts → metadata only (no data payload)
+    chart_meta = executor.execute_all_charts_metadata(dashboard.dashboard_charts or [])
+
+    # Attach data_endpoint URL to each chart
+    for cm in chart_meta:
+        cm["data_endpoint"] = f"/api/v1/dashboards/{dashboard_id}/charts/{cm['chart_index']}/data"
 
     return DashboardExecuteResponseSchema(
         dashboard_id=dashboard_id,
         dataset_id=dashboard.dataset_id,
         kpi_results=kpi_results,
-        chart_results=chart_results,
+        chart_results=[
+            ChartMetadataSchema.model_validate(cm) for cm in chart_meta
+        ],
         executed_at=datetime.now(timezone.utc),
+    )
+
+
+# ---------------------------------------------------------------------------
+# GET /dashboards/{dashboard_id}/charts/{chart_index}/data
+# ---------------------------------------------------------------------------
+
+@router.get(
+    "/dashboards/{dashboard_id}/charts/{chart_index}/data",
+    response_model=ChartDataResponseSchema,
+    summary="Fetch chart data arrays for a single chart",
+)
+async def get_chart_data(
+    dashboard_id: int,
+    chart_index: int,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Lazy-load the actual data for one chart of an executed dashboard.
+
+    Returns compact columnar arrays instead of verbose per-point objects:
+    - **bar/line/grouped**: `{"axis_x": [...], "axis_y": [...]}`
+    - **scatter**: `{"axis_x": [...], "axis_y": [...]}`
+    - **crosstab/heatmap**: `{"labels_x": [...], "labels_y": [...], "matrix": [[...]]}`
+    """
+    # Load dashboard
+    dashboard = await DashboardRepository.get_by_id(db, dashboard_id)
+    if not dashboard:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Dashboard {dashboard_id} not found.",
+        )
+
+    charts = dashboard.dashboard_charts or []
+    if chart_index < 0 or chart_index >= len(charts):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"chart_index {chart_index} not found. This dashboard has {len(charts)} charts (0..{len(charts) - 1}).",
+        )
+
+    # Load dataset + parse
+    dataset = await DatasetRepository.get_by_id(db, dashboard.dataset_id)
+    if not dataset:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Dataset {dashboard.dataset_id} not found.",
+        )
+
+    try:
+        df, _ = await ParserService.parse_file(dataset.file_path, dataset.file_type)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Could not parse dataset file: {e!s}",
+        ) from e
+
+    executor = KPIExecutor(df)
+
+    try:
+        result = executor.execute_single_chart(charts, chart_index)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Chart execution failed: {e!s}",
+        ) from e
+
+    return ChartDataResponseSchema(
+        chart_index=chart_index,
+        chart_title=result.get("chart_title", ""),
+        x_axis=result.get("x_axis"),
+        y_axis=result.get("y_axis"),
+        aggregation=result.get("aggregation"),
+        point_count=result.get("point_count", 0),
+        data=result.get("data", {}),
+        execution_success=result.get("execution_success", False),
+        error=result.get("error"),
     )

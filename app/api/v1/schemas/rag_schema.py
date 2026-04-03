@@ -97,21 +97,50 @@ class KpiExecutionResultSchema(BaseModel):
     execution_success: bool
 
 
-class ChartExecutionResultSchema(BaseModel):
-    """Result for a single chart grouping execution."""
+class ChartMetadataSchema(BaseModel):
+    """Lightweight chart metadata — no data payload. Returned in execute response."""
+    chart_index: int
+    chart_title: str
+    chart_type: Optional[str] = None
+    x_axis: Optional[str] = None
+    y_axis: Optional[str] = None
+    aggregation: Optional[str] = None
+    point_count: int = 0
+    insight: str = ""
+    data_endpoint: str = Field(
+        ...,
+        description="GET this URL to fetch the actual chart data arrays",
+    )
+    execution_success: bool
+    error: Optional[str] = None
+
+
+class ChartDataResponseSchema(BaseModel):
+    """Full chart data returned by the lazy-loading data endpoint.
+
+    Data uses compact columnar arrays:
+      - bar/line/grouped: {axis_x: [...], axis_y: [...]}
+      - scatter:          {axis_x: [...], axis_y: [...]}
+      - crosstab:         {labels_x: [...], labels_y: [...], matrix: [[...]]}
+    """
+    chart_index: int
     chart_title: str
     x_axis: Optional[str] = None
     y_axis: Optional[str] = None
     aggregation: Optional[str] = None
+    point_count: int = 0
     data: Dict[str, Any] = Field(default_factory=dict)
-    error: Optional[str] = None
     execution_success: bool
+    error: Optional[str] = None
 
 
 class DashboardExecuteResponseSchema(BaseModel):
-    """Response from POST /dashboards/{id}/execute."""
+    """Response from POST /dashboards/{id}/execute.
+
+    Charts contain metadata only — call each chart's data_endpoint to fetch arrays.
+    """
     dashboard_id: int
     dataset_id: int
     kpi_results: List[KpiExecutionResultSchema] = Field(default_factory=list)
-    chart_results: List[ChartExecutionResultSchema] = Field(default_factory=list)
+    chart_results: List[ChartMetadataSchema] = Field(default_factory=list)
     executed_at: datetime

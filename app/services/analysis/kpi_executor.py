@@ -300,18 +300,18 @@ class KPIExecutor:
             tmp_df = self.df.copy()
             tmp_df[agg_col] = pd.to_numeric(tmp_df[agg_col], errors="coerce")
 
-            grouped = tmp_df.groupby(group_col)[agg_col].agg(safe_fn)
-            data = {
-                str(k): (float(v) if pd.notnull(v) else None)
-                for k, v in grouped.items()
-            }
+            pandas_agg = "mean" if safe_name == "avg" else safe_name
+            grouped = tmp_df.groupby(group_col)[agg_col].agg(pandas_agg)
+            keys = [str(k) for k in grouped.index]
+            vals = [(float(v) if pd.notnull(v) else None) for v in grouped.values]
 
             return {
                 "chart_title": title,
                 "x_axis": group_col,
                 "y_axis": agg_col,
                 "aggregation": safe_name,
-                "data": data,
+                "point_count": len(keys),
+                "data": {"axis_x": keys, "axis_y": vals},
                 "execution_success": True,
             }
 
@@ -374,17 +374,15 @@ class KPIExecutor:
         xs = pd.to_numeric(self.df[x_col], errors="coerce")
         ys = pd.to_numeric(self.df[y_col], errors="coerce")
         valid = xs.notna() & ys.notna()
-        points = [
-            {"x": float(xs.iat[i]), "y": float(ys.iat[i])}
-            for i in range(len(self.df))
-            if valid.iat[i]
-        ]
+        x_vals = [float(xs.iat[i]) for i in range(len(self.df)) if valid.iat[i]]
+        y_vals = [float(ys.iat[i]) for i in range(len(self.df)) if valid.iat[i]]
         return {
             "chart_title": title,
             "x_axis": x_col,
             "y_axis": y_col,
             "aggregation": "scatter",
-            "data": {"series": points},
+            "point_count": len(x_vals),
+            "data": {"axis_x": x_vals, "axis_y": y_vals},
             "execution_success": True,
         }
 
@@ -405,18 +403,19 @@ class KPIExecutor:
 
         normalize = "index" if re.search(r"normalize\s*=\s*['\"]index['\"]", pandas_grouping) else None
         ct = pd.crosstab(self.df[a], self.df[b], normalize=normalize)
-        # JSON-friendly nested dict (string keys)
-        data: Dict[str, Dict[str, Optional[float]]] = {}
-        for idx, row in ct.iterrows():
-            data[str(idx)] = {
-                str(col): (float(val) if pd.notnull(val) else None) for col, val in row.items()
-            }
+        labels_x = [str(idx) for idx in ct.index]
+        labels_y = [str(col) for col in ct.columns]
+        matrix = [
+            [(float(ct.at[idx, col]) if pd.notnull(ct.at[idx, col]) else None) for col in ct.columns]
+            for idx in ct.index
+        ]
         return {
             "chart_title": title,
             "x_axis": a,
             "y_axis": b,
             "aggregation": "crosstab",
-            "data": data,
+            "point_count": len(labels_x) * len(labels_y),
+            "data": {"labels_x": labels_x, "labels_y": labels_y, "matrix": matrix},
             "execution_success": True,
         }
 
@@ -431,6 +430,33 @@ class KPIExecutor:
     def execute_all_charts(self, chart_configs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Execute all chart configs and return a list of results."""
         return [self.execute_chart(c) for c in chart_configs]
+
+    def execute_all_charts_metadata(
+        self, chart_configs: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
+        """Execute charts but return metadata only (no data payload)."""
+        results = []
+        for idx, cfg in enumerate(chart_configs):
+            full = self.execute_chart(cfg)
+            results.append({
+                "chart_index": idx,
+                "chart_title": full.get("chart_title"),
+                "chart_type": cfg.get("chart_type"),
+                "x_axis": full.get("x_axis"),
+                "y_axis": full.get("y_axis"),
+                "aggregation": full.get("aggregation"),
+                "point_count": full.get("point_count", 0),
+                "insight": cfg.get("business_insight", ""),
+                "execution_success": full.get("execution_success", False),
+                "error": full.get("error"),
+            })
+        return results
+
+    def execute_single_chart(self, chart_configs: List[Dict[str, Any]], chart_index: int) -> Dict[str, Any]:
+        """Execute and return full data for a single chart by index."""
+        if chart_index < 0 or chart_index >= len(chart_configs):
+            raise IndexError(f"chart_index {chart_index} out of range (0..{len(chart_configs) - 1})")
+        return self.execute_chart(chart_configs[chart_index])
 
     # ------------------------------------------------------------------
     # Internal parsers
