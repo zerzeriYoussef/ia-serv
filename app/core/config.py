@@ -41,7 +41,21 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: Optional[str] = None
     # Override via env if your project only exposes 1.5 models, e.g. gemini-1.5-flash
     GEMINI_MODEL: str = "gemini-2.5-flash"
-    
+
+    # Chroma vector store — relative to the project root or absolute
+    CHROMA_DIR: str = "./chroma_data"
+    # Embedding model used for dataset chunk indexing + query embedding
+    GEMINI_EMBEDDING_MODEL: str = "models/text-embedding-004"
+    # Max chunks retrieved per chat query
+    CHAT_RETRIEVAL_TOP_K: int = 8
+    # Number of turns before rolling summary kicks in
+    CHAT_ROLLING_SUMMARY_EVERY: int = 20
+    # Max recent turns loaded from DB and sent to the narrator (×2 = message rows)
+    CHAT_MAX_RECENT_TURNS: int = 10
+    # Last N chat rows (user + assistant) included in the orchestrator JSON-plan prompt
+    # so follow-ups like "yes, the revenue column" stay tied to the thread.
+    CHAT_PLANNER_HISTORY_MESSAGES: int = 12
+
     class Config:  #i will later change setting above for better security
         env_file = ".env"
         case_sensitive = True

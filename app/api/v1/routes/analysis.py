@@ -8,6 +8,7 @@ from typing import List, Dict, Any
 import logging
 
 from app.core.database import get_db
+from app.core.config import settings
 from app.services.analysis.column_analyzer import ColumnAnalyzer
 from app.services.analysis.relationship_detector import RelationshipDetector
 from app.services.data.parser_service import ParserService
@@ -23,6 +24,8 @@ from app.api.v1.schemas.analysis_schema import (
 from app.services.analysis.statistical_relationship_service import (
     run_multi_dataset_analytics,
 )
+from app.services.rag.dataset_indexer import index_dataset
+
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
@@ -98,6 +101,7 @@ def _normalize_relationships(relationships: List[Dict[str, Any]]) -> List[Dict[s
 async def analyze_dataset(
     dataset_id: int,
     request: AnalysisRequest = AnalysisRequest(),
+    background_tasks: BackgroundTasks = BackgroundTasks(),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -180,9 +184,19 @@ async def analyze_dataset(
     )
     
     await db.commit()
-    
+
     logger.info(f"Analysis saved for dataset {dataset_id}: {len(results['relationships'])} relationships")
-    
+
+    # Trigger Chroma index rebuild in the background so chat Q&A is ready immediately
+    if settings.GEMINI_API_KEY:
+        async def _bg_index():
+            try:
+                n = await index_dataset(db, dataset_id)
+                logger.info("Auto-index complete: dataset=%s chunks=%s", dataset_id, n)
+            except Exception as exc:
+                logger.warning("Auto-index failed (non-fatal): %s", exc)
+        background_tasks.add_task(_bg_index)
+
     return {
         "dataset_id": dataset_id,
         "columns": dataset.columns,

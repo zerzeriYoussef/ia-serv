@@ -11,6 +11,7 @@ from app.core.logging import logger
 from app.api.v1.routes import upload
 from app.api.v1.routes import analysis
 from app.api.v1.routes import rag
+from app.api.v1.routes import chat
 
 # Lifespan context manager for startup/shutdown events
 @asynccontextmanager
@@ -53,6 +54,7 @@ app.include_router(upload.router, prefix="/api/v1", tags=["Upload"])
 app.include_router(cleaning.router, prefix="/api/v1", tags=["Cleaning"])
 app.include_router(analysis.router, prefix="/api/v1", tags=["Analysis"])
 app.include_router(rag.router, prefix="/api/v1", tags=["RAG"])
+app.include_router(chat.router, prefix="/api/v1", tags=["Chat"])
 
 # Health check endpoint
 @app.get("/health")
