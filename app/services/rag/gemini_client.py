@@ -63,6 +63,8 @@ async def generate_json_response(
             resp.raise_for_status()
         except httpx.HTTPStatusError as e:
             logger.error("Gemini HTTP error: %s %s", e.response.status_code, e.response.text[:500])
+            with open("err.log", "a") as f:
+                f.write(f"JSON Error: {e.response.status_code} {e.response.text}\n")
             raise
 
     data = resp.json()
@@ -78,8 +80,10 @@ async def generate_json_response(
     cleaned = _strip_json_fence(text)
     try:
         return json.loads(cleaned)
-    except json.JSONDecodeError as e:
+    except Exception as e:
         logger.error("Gemini JSON parse error: %s | snippet=%s", e, cleaned[:400])
+        with open("err.log", "a") as f:
+            f.write(f"Bad JSON generated: {e}\nRaw Text: {text}\n")
         raise ValueError("Model did not return valid JSON") from e
 
 
@@ -175,7 +179,17 @@ async def stream_text_response(
             params={"key": key, "alt": "sse"},
             json=body,
         ) as resp:
-            resp.raise_for_status()
+            try:
+                resp.raise_for_status()
+            except httpx.HTTPStatusError as e:
+                logger.error("Gemini stream HTTP error: %s", e)
+                with open("err.log", "a") as f:
+                    try:
+                        f.write(f"Stream Error: {e.response.status_code} {e.response.text}\n")
+                    except Exception:
+                        f.write(f"Stream Error (no text context): {e.response.status_code}\n")
+                raise
+                
             async for line in resp.aiter_lines():
                 if not line.startswith("data:"):
                     continue

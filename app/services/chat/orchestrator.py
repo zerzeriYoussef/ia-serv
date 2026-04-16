@@ -562,7 +562,12 @@ Answer directly and specifically. If the tool results contain the answer, give t
             }
             async with httpx.AsyncClient(timeout=60.0) as client:
                 resp = await client.post(url, params={"key": key}, json=body)
-                resp.raise_for_status()
+                try:
+                    resp.raise_for_status()
+                except httpx.HTTPStatusError as e:
+                    with open("err.log", "a") as f:
+                        f.write(f"Fallback Error: {e.response.status_code} {e.response.text}\n")
+                    raise
             data = resp.json()
             cands = data.get("candidates") or []
             parts_list = (cands[0].get("content") or {}).get("parts") or [] if cands else []
