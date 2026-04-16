@@ -45,7 +45,7 @@ class Settings(BaseSettings):
     # Chroma vector store — relative to the project root or absolute
     CHROMA_DIR: str = "./chroma_data"
     # Embedding model used for dataset chunk indexing + query embedding
-    GEMINI_EMBEDDING_MODEL: str = "models/text-embedding-004"
+    GEMINI_EMBEDDING_MODEL: str = "models/gemini-embedding-001"
     # Max chunks retrieved per chat query
     CHAT_RETRIEVAL_TOP_K: int = 8
     # Number of turns before rolling summary kicks in

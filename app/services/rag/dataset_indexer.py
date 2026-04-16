@@ -60,8 +60,13 @@ async def _embed_texts(texts: List[str]) -> List[List[float]]:
         f"{settings.GEMINI_EMBEDDING_MODEL}:batchEmbedContents"
     )
 
+    model_name = settings.GEMINI_EMBEDDING_MODEL
     requests_payload = [
-        {"content": {"parts": [{"text": t}]}, "taskType": "RETRIEVAL_DOCUMENT"}
+        {
+            "model": model_name,
+            "content": {"parts": [{"text": t}]},
+            "taskType": "RETRIEVAL_DOCUMENT",
+        }
         for t in texts
     ]
 
