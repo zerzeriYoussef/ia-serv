@@ -19,9 +19,10 @@ from pydantic import BaseModel, Field
 
 
 # ---------------------------------------------------------------------------
-# Allowed operations / aggregations (allowlist enforced in AnalysisAgent)
+# Tool arg / result schemas (Analysis Agent contract)
 # ---------------------------------------------------------------------------
 
+# Kept for backward-compat imports elsewhere in the codebase
 class AllowedOp(str, Enum):
     groupby_agg  = "groupby_agg"
     value_counts = "value_counts"
@@ -29,35 +30,29 @@ class AllowedOp(str, Enum):
     correlation  = "correlation"
     filter_agg   = "filter_agg"
 
-
 ALLOWED_AGGS = frozenset(
     {"sum", "mean", "median", "count", "nunique", "min", "max", "std"}
 )
 
 
-# ---------------------------------------------------------------------------
-# Tool arg / result schemas (Analysis Agent contract)
-# ---------------------------------------------------------------------------
-
 class ToolArgs(BaseModel):
-    """Arguments passed from the Orchestrator to the Analysis Agent.
+    """Free-form Pandas expression the LLM produces.
 
-    The Orchestrator must produce only ops from AllowedOp and agg_func from
-    ALLOWED_AGGS. The Analysis Agent validates both before executing anything.
+    `code_expr` is a single Python expression evaluated against the DataFrame
+    bound as `df`. The result must be a scalar, Series, or DataFrame — the
+    AnalysisAgent normalises it into a ToolResult automatically.
+
+    Example:
+        df[df['continent']=='Europe'].groupby('drink_preference')['monthly_spend'].mean()
     """
-    op: AllowedOp
-    group_col: Optional[str] = None
-    agg_col: Optional[str] = None
-    agg_func: Optional[Literal["sum", "mean", "median", "count", "nunique", "min", "max", "std"]] = None
-    filter_col: Optional[str] = None
-    filter_val: Optional[Union[str, float]] = None
-    top_n: int = Field(default=20, ge=1, le=200)
+    code_expr: str
+    label: Optional[str] = None  # human-readable description of what this computes
 
 
 class ToolResult(BaseModel):
     """Structured output of one Analysis Agent tool call — never prose."""
     result_type: Literal["scalar", "series", "frame_preview"]
-    payload: Any                    # dict / list — bounded size enforced by agent
+    payload: Any
     warnings: List[str] = Field(default_factory=list)
 
 

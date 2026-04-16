@@ -27,7 +27,6 @@ from typing import Any, AsyncGenerator, Dict, List, Optional, Tuple
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.schemas.chat_schema import (
-    AllowedOp,
     ChartEvent,
     ChartSpec,
     DoneEvent,
@@ -73,29 +72,37 @@ Output a single JSON object with these EXACT keys:
 
 RULES:
 1. intent must be exactly one of: retrieve_only, analyze, visualize, clarify, refuse_unsafe
-2. refuse_unsafe if the question asks to delete, modify, execute code, or access PII
-3. tool_calls items MUST use these exact field names: "op", "group_col", "agg_col", "agg_func",
-   "filter_col", "filter_val", "top_n" (no synonyms: do not use "group", "agg", "column", "func")
-4. "op" must be one of: groupby_agg, value_counts, describe, correlation, filter_agg
-5. agg_func must be one of: sum, mean, median, count, nunique, min, max, std
-6. Column names MUST come from DATASET_CONTEXT.columns — never invent names
-7. For a single-column statistic (mean, min, max, std, quartiles) or "first numeric column",
-   use op "describe" with "agg_col" set to that column — NOT groupby_agg without a grouping column
-8. groupby_agg REQUIRES both group_col and agg_col (breakdown by category + metric)
-9. value_counts uses "group_col" as the categorical column to count
-10. For simple factual questions answerable from row_count/columns only, use retrieve_only with []
-11. needs_chart true only when a chart genuinely helps
-12. RECENT_CONVERSATION (in the user prompt) is the same thread, oldest→newest.
-    Use it to interpret short replies, pronouns, and follow-ups to your prior clarifications.
-    If the user is elaborating on an earlier question (e.g. about a named column), prefer
-    analyze or retrieve_only with concrete tool_calls — do NOT use intent=clarify again
-    unless the thread still lacks any identifiable column or metric.
-13. If ambiguous AND the thread has no usable topic yet, intent=clarify and set clarification_question
+2. refuse_unsafe ONLY if the question explicitly asks to delete, drop, overwrite data, or access
+   credentials/PII. Analytics questions (even complex ones) must NEVER be refused.
+3. Each tool_call has exactly two fields:
+   - "code_expr": a single valid Python expression using `df` (the dataset DataFrame) and `pd` (pandas)
+   - "label": a short human-readable description of what it computes
+4. The expression must be a single eval()-able Python expression — no statements, no assignments,
+   no imports, no loops. It must return a scalar, pd.Series, or pd.DataFrame.
+5. Column names MUST come from DATASET_CONTEXT.columns — never invent names.
+6. When checking categories and values, always use EXACT values and case from `sample_values` in DATASET_CONTEXT. For example, if sample_values says `high`, don't use `High`.
+7. You MAY chain any pandas operations: filter, groupby, agg, pivot, sort, corr, etc.
+8. For multi-condition questions, use boolean masks:
+   df[(df['col1']=='val1') & (df['col2']=='val2')].groupby('cat')['metric'].mean()
+9. For top-N questions, chain .sort_values().head(N)
+10. For comparisons across groups, use groupby + agg
+11. needs_chart=true AND add a tool_call whenever the answer compares 
+    multiple categories, shows a trend, or involves a distribution — 
+    even if intent=retrieve_only. A chart ALWAYS requires at least one 
+    tool_call to have data to plot. If you set needs_chart=true, you 
+    MUST also add a tool_call that computes the data for the chart.
+12. retrieve_only with [] when answerable from row_count/columns alone
+13. RECENT_CONVERSATION: use it to resolve follow-ups, pronouns, short replies.
+    Prefer analyze with concrete code_expr over intent=clarify unless the question
+    truly cannot be resolved from context.
+14. If still ambiguous after checking conversation context, intent=clarify.
 
 EXAMPLES (valid tool_calls shapes):
-{"op":"describe","agg_col":"revenue"}
-{"op":"groupby_agg","group_col":"region","agg_col":"revenue","agg_func":"sum"}
-{"op":"value_counts","group_col":"status"}
+{"code_expr": "df['revenue'].describe()", "label": "Revenue stats"}
+{"code_expr": "df.groupby('region')['revenue'].sum().sort_values(ascending=False)", "label": "Revenue by region"}
+{"code_expr": "df[(df['continent']=='europe') & (df['income_level']=='high')].groupby('drink_preference')['monthly_spend'].mean()", "label": "Monthly spend by drink, Europe+High income"}
+{"code_expr": "df['status'].value_counts()", "label": "Status distribution"}
+{"code_expr": "df[['col_a','col_b']].corr()", "label": "Correlation"}
 
 Output ONLY the JSON object, no markdown, no explanation.
 """
@@ -146,7 +153,19 @@ def _build_history_contents(
 
     for msg in messages:
         role = "user" if msg.role.value == "user" else "model"
-        contents.append({"role": role, "parts": [{"text": msg.content}]})
+        text = (msg.content or "").strip()
+        if not text:
+            text = "(empty message)"
+            
+        if contents and contents[-1]["role"] == role:
+            contents[-1]["parts"][0]["text"] += f"\n\n{text}"
+        else:
+            contents.append({"role": role, "parts": [{"text": text}]})
+            
+    # Gemini requires strict user/model alternation and we are about to append a 'user' message.
+    if contents and contents[-1]["role"] == "user":
+        contents.append({"role": "model", "parts": [{"text": "(No response recorded)"}]})
+        
     return contents
 
 
@@ -215,8 +234,12 @@ def _trim_tool_result_preview(result: ToolResult, max_chars: int = 500) -> str:
     return raw
 
 
-def _make_analysis_context(analysis_row: Any, dataset: Any) -> Dict[str, Any]:
-    return {
+def _make_analysis_context(
+    analysis_row: Any,
+    dataset: Any,
+    sample_values: Optional[Dict[str, List[Any]]] = None,
+) -> Dict[str, Any]:
+    ctx: Dict[str, Any] = {
         "dataset_id": dataset.id,
         "filename": dataset.original_filename,
         "row_count": dataset.row_count,
@@ -229,122 +252,60 @@ def _make_analysis_context(analysis_row: Any, dataset: Any) -> Dict[str, Any]:
         "geographic": (analysis_row.geographic or []),
         "identifiers": (analysis_row.identifiers or []),
     }
+    if sample_values:
+        ctx["sample_values"] = sample_values  # {col: [val1, val2, ...]}
+    return ctx
 
 
-def _normalize_tool_call_dict(tc: dict) -> dict:
+def _extract_sample_values(
+    df: "pd.DataFrame",
+    max_cols: int = 150,
+    max_vals: int = 15,
+) -> Dict[str, List[Any]]:
     """
-    Map common model mistakes to ToolArgs field names before validation.
+    For each low-cardinality categorical column, return up to `max_vals`
+    unique values (preserving actual casing from the data).
     """
-    out = dict(tc)
-    if "op" not in out and isinstance(out.get("operation"), str):
-        out["op"] = out.pop("operation")
+    import pandas as pd
+    samples: Dict[str, List[Any]] = {}
+    for col in df.columns[:max_cols]:
+        if df[col].dtype == object or str(df[col].dtype) in ("category", "string"):
+            uniq = df[col].dropna().unique()
+            if 1 < len(uniq) <= 50:  # skip constant cols and high-cardinality cols
+                samples[col] = [str(v) for v in uniq[:max_vals]]
+    return samples
 
-    # Copy known synonyms into canonical keys (only if target not already set)
-    synonyms = [
-        ("group", "group_col"),
-        ("group_by", "group_col"),
-        ("groupCol", "group_col"),
-        ("by", "group_col"),
-        ("agg", "agg_col"),
-        ("value_col", "agg_col"),
-        ("metric", "agg_col"),
-        ("func", "agg_func"),
-        ("aggregation", "agg_func"),
-    ]
-    for src, dst in synonyms:
-        if src in out and out.get(dst) in (None, "") and out[src] not in (None, ""):
-            out[dst] = out.pop(src)
-
-    # "column" → agg_col when no other target (typical for describe / single-metric)
-    col = out.get("column")
-    if (
-        col not in (None, "")
-        and out.get("agg_col") in (None, "")
-        and out.get("group_col") in (None, "")
-    ):
-        out["agg_col"] = out.pop("column")
-
-    return out
-
-
-def _repair_tool_calls(
-    tool_calls: List[ToolArgs], analysis_ctx: Dict[str, Any]
-) -> List[ToolArgs]:
-    """
-    Fix plans where the model chose groupby_agg but omitted required columns —
-    common for questions that need describe / global stats instead.
-    """
-    columns = set(analysis_ctx.get("columns") or [])
-    pm = analysis_ctx.get("primary_metric")
-    repaired: List[ToolArgs] = []
-
-    for tc in tool_calls:
-        if tc.op != AllowedOp.groupby_agg:
-            repaired.append(tc)
-            continue
-        if tc.group_col and tc.agg_col:
-            repaired.append(tc)
-            continue
-
-        # Prefer an explicit partial column if valid
-        fallback_col = None
-        if tc.agg_col and tc.agg_col in columns:
-            fallback_col = tc.agg_col
-        elif tc.group_col and tc.group_col in columns:
-            fallback_col = tc.group_col
-        elif pm and pm in columns:
-            fallback_col = pm
-        else:
-            ct = analysis_ctx.get("column_types") or {}
-            for c in analysis_ctx.get("columns") or []:
-                if c not in columns:
-                    continue
-                t = str(ct.get(c, "")).lower()
-                if any(x in t for x in ("int", "float", "double", "number", "decimal")):
-                    fallback_col = c
-                    break
-
-        if fallback_col:
-            logger.info(
-                "Repairing invalid groupby_agg → describe(agg_col=%s)", fallback_col
-            )
-            repaired.append(
-                ToolArgs(
-                    op=AllowedOp.describe,
-                    agg_col=fallback_col,
-                    agg_func=tc.agg_func,
-                )
-            )
-        else:
-            logger.warning("Dropping invalid groupby_agg (no usable column): %s", tc)
-
-    return repaired
 
 
 def _parse_plan_robust(raw: Any) -> OrchestratorPlan:
     """
     Validate raw LLM dict → OrchestratorPlan with generous fallbacks.
-    Logs warnings rather than crashing on minor schema violations.
+    Now expects tool_calls with {code_expr, label} shapes.
     """
     if not isinstance(raw, dict):
         logger.warning("Plan response is not a dict: %s", type(raw))
         return OrchestratorPlan(intent=Intent.retrieve_only, tool_calls=[], needs_chart=False)
 
-    # Coerce intent to valid enum value
     raw_intent = str(raw.get("intent", "retrieve_only")).strip().lower()
     valid_intents = {e.value for e in Intent}
     if raw_intent not in valid_intents:
         logger.warning("Unknown intent '%s', falling back to retrieve_only", raw_intent)
         raw_intent = "retrieve_only"
 
-    # Parse tool_calls defensively
     raw_tools = raw.get("tool_calls") or []
     tool_calls = []
     for tc in raw_tools:
         if not isinstance(tc, dict):
             continue
+        code_expr = tc.get("code_expr") or ""
+        if not code_expr.strip():
+            logger.warning("Skipping tool_call with empty code_expr: %s", tc)
+            continue
         try:
-            tool_calls.append(ToolArgs.model_validate(_normalize_tool_call_dict(tc)))
+            tool_calls.append(ToolArgs(
+                code_expr=code_expr.strip(),
+                label=tc.get("label", ""),
+            ))
         except Exception as e:
             logger.warning("Skipping invalid tool_call %s: %s", tc, e)
 
@@ -392,7 +353,16 @@ async def run_chat_turn(
         yield _sse(SseEventType.error, ErrorEvent(error=msg).model_dump())
         return
 
-    analysis_ctx = _make_analysis_context(analysis_row, dataset)
+    # ── Pre-load DataFrame (needed for sample values + tool execution) ──
+    try:
+        df, _ = await ParserService.parse_file(dataset.file_path, dataset.file_type)
+    except Exception as exc:
+        logger.error("Failed to parse dataset file early: %s", exc)
+        df = None
+
+    sample_values = _extract_sample_values(df) if df is not None else {}
+    analysis_ctx = _make_analysis_context(analysis_row, dataset, sample_values)
+
     logger.info(
         "chat_turn: dataset=%s conv=%s user_msg='%s...'",
         dataset_id, conversation_id, user_message[:60],
@@ -444,14 +414,12 @@ Produce a JSON plan with keys: intent, tool_calls, needs_chart, clarification_qu
         plan = OrchestratorPlan(intent=Intent.retrieve_only, tool_calls=[], needs_chart=False)
 
     if plan.tool_calls and plan.intent in (Intent.analyze, Intent.visualize):
-        fixed_tools = _repair_tool_calls(plan.tool_calls, analysis_ctx)
-        if fixed_tools != plan.tool_calls:
-            plan = plan.model_copy(update={"tool_calls": fixed_tools})
+        pass  # No repair needed — LLM generates direct code_expr now
 
     logger.info("chat_turn: intent=%s tools=%d chart=%s", plan.intent, len(plan.tool_calls), plan.needs_chart)
 
     # ── 4. Emit IntentEvent ────────────────────────────────────────────
-    tool_summary = ", ".join(tc.op for tc in plan.tool_calls) if plan.tool_calls else "none"
+    tool_summary = ", ".join(tc.label or tc.code_expr[:40] for tc in plan.tool_calls) if plan.tool_calls else "none"
     yield _sse(
         SseEventType.intent,
         IntentEvent(
@@ -486,60 +454,48 @@ Produce a JSON plan with keys: intent, tool_calls, needs_chart, clarification_qu
     tool_results: List[Tuple[ToolArgs, ToolResult]] = []
     chart_spec: Optional[ChartSpec] = None
 
-    if plan.tool_calls and plan.intent in (Intent.analyze, Intent.visualize):
-        try:
-            df, _ = await ParserService.parse_file(dataset.file_path, dataset.file_type)
-        except Exception as exc:
-            logger.error("Failed to parse dataset file: %s", exc)
-            df = None
-
-        if df is not None:
-            agent = AnalysisAgent(df)
-            for tool_args in plan.tool_calls:
+    if df is not None:
+        agent = AnalysisAgent(df)
+        for tool_args in plan.tool_calls:
+            yield _sse(
+                SseEventType.tool_start,
+                ToolStartEvent(
+                    tool="pandas_eval",
+                    args_summary=tool_args.label or tool_args.code_expr[:80],
+                ).model_dump(),
+            )
+            try:
+                result = await agent.run(tool_args)
+                tool_results.append((tool_args, result))
                 yield _sse(
-                    SseEventType.tool_start,
-                    ToolStartEvent(
-                        tool=tool_args.op.value,
-                        args_summary=(
-                            f"{tool_args.op.value}("
-                            f"group={tool_args.group_col}, "
-                            f"agg={tool_args.agg_col}, "
-                            f"func={tool_args.agg_func})"
-                        ),
-                    ).model_dump(),
+                    SseEventType.tool_result,
+                    ToolResultEvent(preview=_trim_tool_result_preview(result)).model_dump(),
                 )
-                try:
-                    result = await agent.run(tool_args)
-                    tool_results.append((tool_args, result))
-                    yield _sse(
-                        SseEventType.tool_result,
-                        ToolResultEvent(preview=_trim_tool_result_preview(result)).model_dump(),
-                    )
-                    logger.info("chat_turn: tool %s succeeded", tool_args.op.value)
-                except Exception as exc:
-                    logger.warning("Tool %s failed: %s", tool_args.op.value, exc)
-                    yield _sse(
-                        SseEventType.tool_result,
-                        ToolResultEvent(preview=f"Error: {exc!s}").model_dump(),
-                    )
+                logger.info("chat_turn: expr succeeded: %s", tool_args.code_expr[:80])
+            except Exception as exc:
+                logger.warning("Expr failed: %s | error: %s", tool_args.code_expr[:80], exc)
+                yield _sse(
+                    SseEventType.tool_result,
+                    ToolResultEvent(preview=f"Error: {exc!s}").model_dump(),
+                )
 
-            # ── 7. Visualization ───────────────────────────────────────────
-            if plan.needs_chart and tool_results:
-                _, last_result = tool_results[-1]
-                viz = VizAgent()
-                try:
-                    chart_spec = viz.build_spec(
-                        last_result,
-                        intent_hint=user_message,
-                        col_types=dataset.column_types or {},
+        # ── 7. Visualization ───────────────────────────────────────────
+        if plan.needs_chart and tool_results:
+            _, last_result = tool_results[-1]
+            viz = VizAgent()
+            try:
+                chart_spec = viz.build_spec(
+                    last_result,
+                    intent_hint=user_message,
+                    col_types=dataset.column_types or {},
+                )
+                if chart_spec:
+                    yield _sse(
+                        SseEventType.chart,
+                        ChartEvent(chart_spec=chart_spec.model_dump()).model_dump(),
                     )
-                    if chart_spec:
-                        yield _sse(
-                            SseEventType.chart,
-                            ChartEvent(chart_spec=chart_spec.model_dump()).model_dump(),
-                        )
-                except Exception as exc:
-                    logger.warning("VizAgent failed (non-fatal): %s", exc)
+            except Exception as exc:
+                logger.warning("VizAgent failed (non-fatal): %s", exc)
 
     # ── 8. Build narrator prompt & stream answer ───────────────────────
     tool_results_text = ""
@@ -547,7 +503,7 @@ Produce a JSON plan with keys: intent, tool_calls, needs_chart, clarification_qu
         parts = []
         for args, res in tool_results:
             parts.append(
-                f"Op: {args.op.value}\n"
+                f"Query: {args.label or args.code_expr}\n"
                 f"Result: {json.dumps(res.payload, default=str)[:2000]}"
             )
         tool_results_text = "\n\n".join(parts)

@@ -119,4 +119,26 @@ class VizAgent:
                     "matrix": payload["matrix"],
                 },
             )
+            
+        # General DataFrame fallback
+        cols = list(payload.keys())
+        if len(cols) >= 2:
+            x_col = cols[0]
+            # Use the last column as the primary y_col, or let the frontend render multiple lines
+            y_col = cols[-1]
+
+            chart_type = ChartType.bar
+            x_lower = str(x_col).lower()
+            if any(h in x_lower for h in self.TEMPORAL_HINTS) or "trend" in intent_hint.lower():
+                chart_type = ChartType.line
+
+            return ChartSpec(
+                chart_type=chart_type,
+                x_col=str(x_col),
+                y_col=str(y_col),
+                title=title or f"{y_col} by {x_col}",
+                caption="Tabular data visualization.",
+                data=payload,
+            )
+
         return None

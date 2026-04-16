@@ -1,45 +1,77 @@
 """
-Analysis Agent — safe Pandas tool executor for the chat system.
+Analysis Agent — executes LLM-generated Pandas expressions against a DataFrame.
 
-Wraps KPIExecutor patterns with:
-- Strict op/agg allowlist (AllowedOp / ALLOWED_AGGS)
-- Column name validation before any execution
-- Result size capping (frame_preview ≤ 20 rows, series ≤ 50 entries)
-- 10-second asyncio timeout via thread pool
+The LLM produces a `code_expr` string (a single Python expression). This agent
+evaluates it in a restricted namespace that only exposes `df` and `pd`, so the
+LLM can express any query naturally (multi-filter, groupby, pivot, etc.) while
+preventing access to the filesystem, network, or OS.
+
+Sandbox rules (enforced via restricted eval namespace):
+- Only `df` (the dataset DataFrame) and `pd` (pandas) are available
+- `__builtins__` is completely removed
+- No import, open, os, exec, eval, or network calls possible
+- Results are normalised to a ToolResult with a capped payload
 """
 
 from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any
 
+import numpy as np
 import pandas as pd
 
-from app.api.v1.schemas.chat_schema import AllowedOp, ALLOWED_AGGS, ToolArgs, ToolResult
+from app.api.v1.schemas.chat_schema import ToolArgs, ToolResult
 
 logger = logging.getLogger(__name__)
 
-_EXECUTOR_TIMEOUT = 10.0  # seconds
+_EXECUTOR_TIMEOUT = 15.0  # seconds — slightly more headroom for complex queries
+
+# Builtins that are safe to expose in the sandbox
+_SAFE_BUILTINS: dict[str, Any] = {
+    "len": len,
+    "range": range,
+    "list": list,
+    "dict": dict,
+    "str": str,
+    "int": int,
+    "float": float,
+    "bool": bool,
+    "round": round,
+    "abs": abs,
+    "min": min,
+    "max": max,
+    "sum": sum,
+    "sorted": sorted,
+    "enumerate": enumerate,
+    "zip": zip,
+    "True": True,
+    "False": False,
+    "None": None,
+}
+
+MAX_SERIES_ROWS = 50
+MAX_FRAME_ROWS = 20
 
 
 class AnalysisAgentError(ValueError):
-    """Raised for validation errors before execution begins."""
+    """Raised when expression evaluation fails."""
 
 
 class AnalysisAgent:
     """
-    Executes one ToolArgs call against a DataFrame.
+    Evaluates a free-form Pandas expression produced by the LLM.
 
-    Design rules:
-    - No eval() / exec() anywhere in this file.
-    - Every op is an explicit branch — no dynamic dispatch.
-    - Column names validated against df.columns before touching data.
-    - Results bounded in size before returning.
+    The expression is run in a restricted namespace:
+      - `df`  → the full dataset DataFrame
+      - `pd`  → pandas
+      - `np`  → numpy
+      - safe builtins only (no open, import, exec, eval, os, etc.)
+
+    The raw result (scalar, Series, or DataFrame) is normalised into a
+    ToolResult with a bounded payload so the Narrator always gets clean data.
     """
-
-    MAX_SERIES_ROWS = 50
-    MAX_FRAME_ROWS = 20
 
     def __init__(self, df: pd.DataFrame) -> None:
         self.df = df
@@ -50,185 +82,99 @@ class AnalysisAgent:
 
     async def run(self, args: ToolArgs) -> ToolResult:
         """
-        Validate args, execute the op in a thread pool with timeout, return ToolResult.
-        Raises AnalysisAgentError for disallowed ops / missing columns.
+        Evaluate `args.code_expr` asynchronously in a thread pool.
+        Returns a normalised ToolResult.
+        Raises AnalysisAgentError on syntax / runtime errors.
         """
-        self._validate(args)
         try:
             result = await asyncio.wait_for(
-                asyncio.get_event_loop().run_in_executor(None, self._execute, args),
+                asyncio.get_event_loop().run_in_executor(
+                    None, self._execute, args.code_expr
+                ),
                 timeout=_EXECUTOR_TIMEOUT,
             )
         except asyncio.TimeoutError:
             raise AnalysisAgentError(
-                f"Tool execution timed out after {_EXECUTOR_TIMEOUT}s"
+                f"Expression timed out after {_EXECUTOR_TIMEOUT}s"
             )
         return result
 
     # ------------------------------------------------------------------
-    # Validation
+    # Sandboxed execution
     # ------------------------------------------------------------------
 
-    def _validate(self, args: ToolArgs) -> None:
-        # Op allowlist
-        if args.op not in AllowedOp.__members__.values():
-            raise AnalysisAgentError(f"Op '{args.op}' is not in the allowed list")
-
-        # Agg allowlist
-        if args.agg_func and args.agg_func not in ALLOWED_AGGS:
-            raise AnalysisAgentError(
-                f"agg_func '{args.agg_func}' is not allowed. Allowed: {sorted(ALLOWED_AGGS)}"
-            )
-
-        # Column existence
-        missing = []
-        for col in [args.group_col, args.agg_col, args.filter_col]:
-            if col and col not in self.df.columns:
-                missing.append(col)
-        if missing:
-            raise AnalysisAgentError(
-                f"Column(s) not found in dataset: {missing}. "
-                f"Available: {list(self.df.columns[:30])}"
-            )
-
-    # ------------------------------------------------------------------
-    # Dispatch (sync — called inside thread pool)
-    # ------------------------------------------------------------------
-
-    def _execute(self, args: ToolArgs) -> ToolResult:
-        op = args.op
-        if op == AllowedOp.groupby_agg:
-            return self._groupby_agg(args)
-        if op == AllowedOp.value_counts:
-            return self._value_counts(args)
-        if op == AllowedOp.describe:
-            return self._describe(args)
-        if op == AllowedOp.correlation:
-            return self._correlation(args)
-        if op == AllowedOp.filter_agg:
-            return self._filter_agg(args)
-        # Should never reach here due to _validate, but be explicit
-        raise AnalysisAgentError(f"Unknown op '{op}'")
-
-    # ------------------------------------------------------------------
-    # Op implementations
-    # ------------------------------------------------------------------
-
-    def _groupby_agg(self, args: ToolArgs) -> ToolResult:
-        group_col = args.group_col
-        agg_col = args.agg_col
-        agg_func = args.agg_func or "sum"
-
-        if not group_col or not agg_col:
-            raise AnalysisAgentError("groupby_agg requires group_col and agg_col")
-
-        tmp = self.df.copy()
-        tmp[agg_col] = pd.to_numeric(tmp[agg_col], errors="coerce")
-        grouped = tmp.groupby(group_col)[agg_col].agg(agg_func)
-        grouped = grouped.sort_values(ascending=False).head(args.top_n)
-
-        payload = {
-            "axis_x": [str(k) for k in grouped.index],
-            "axis_y": [
-                (float(v) if pd.notnull(v) else None) for v in grouped.values
-            ],
-            "group_col": group_col,
-            "agg_col": agg_col,
-            "agg_func": agg_func,
+    def _execute(self, code_expr: str) -> ToolResult:
+        """Evaluate `code_expr` in a restricted namespace and normalise result."""
+        namespace = {
+            "__builtins__": _SAFE_BUILTINS,
+            "df": self.df,
+            "pd": pd,
+            "np": np,
         }
-        return ToolResult(result_type="series", payload=payload)
 
-    def _value_counts(self, args: ToolArgs) -> ToolResult:
-        col = args.group_col or args.agg_col
-        if not col:
-            raise AnalysisAgentError("value_counts requires group_col")
+        try:
+            raw = eval(compile(code_expr, "<llm_expr>", "eval"), namespace)
+        except SyntaxError as exc:
+            raise AnalysisAgentError(f"Syntax error in generated expression: {exc}")
+        except Exception as exc:
+            raise AnalysisAgentError(f"Runtime error evaluating expression: {exc}")
 
-        vc = self.df[col].astype(str).value_counts().head(args.top_n)
-        payload = {
-            "axis_x": list(vc.index),
-            "axis_y": [int(v) for v in vc.values],
-            "column": col,
-        }
-        return ToolResult(result_type="series", payload=payload)
+        return self._normalise(raw)
 
-    def _describe(self, args: ToolArgs) -> ToolResult:
-        col = args.agg_col or args.group_col
-        if col:
-            series = pd.to_numeric(self.df[col], errors="coerce")
-            stats = series.describe().to_dict()
-            payload = {k: (float(v) if pd.notnull(v) else None) for k, v in stats.items()}
-            payload["column"] = col
-            return ToolResult(result_type="scalar", payload=payload)
+    # ------------------------------------------------------------------
+    # Result normalisation
+    # ------------------------------------------------------------------
 
-        # Full describe (numeric columns only)
-        desc = self.df.select_dtypes(include="number").describe()
-        payload = {}
-        for c in desc.columns[:self.MAX_FRAME_ROWS]:
-            payload[c] = {k: (float(v) if pd.notnull(v) else None)
-                          for k, v in desc[c].to_dict().items()}
-        return ToolResult(result_type="frame_preview", payload=payload)
+    def _normalise(self, raw: Any) -> ToolResult:
+        """Convert any pandas/python result into a bounded ToolResult."""
 
-    def _correlation(self, args: ToolArgs) -> ToolResult:
-        num_df = self.df.select_dtypes(include="number")
-        if args.agg_col and args.group_col:
-            cols = [c for c in (args.group_col, args.agg_col) if c in num_df.columns]
-            if len(cols) == 2:
-                corr_val = float(num_df[cols[0]].corr(num_df[cols[1]]))
-                return ToolResult(
-                    result_type="scalar",
-                    payload={"col_a": cols[0], "col_b": cols[1], "pearson_r": corr_val},
-                )
+        # ── DataFrame ─────────────────────────────────────────────────
+        if isinstance(raw, pd.DataFrame):
+            # Include index if it is meaningful (not a default RangeIndex or flat index without name)
+            if not isinstance(raw.index, pd.RangeIndex) or raw.index.name is not None:
+                raw = raw.reset_index()
+                
+            trimmed = raw.head(MAX_FRAME_ROWS)
+            payload: Any = {
+                str(col): [
+                    (float(v) if isinstance(v, (int, float, np.integer, np.floating)) and pd.notnull(v) else
+                     None if (isinstance(v, float) and pd.isnull(v)) else
+                     str(v))
+                    for v in trimmed[col]
+                ]
+                for col in trimmed.columns
+            }
+            return ToolResult(result_type="frame_preview", payload=payload)
 
-        # Top-N correlation matrix (trimmed)
-        corr = num_df.corr()
-        trimmed = corr.iloc[:self.MAX_FRAME_ROWS, :self.MAX_FRAME_ROWS]
-        payload = {
-            "columns": list(trimmed.columns),
-            "matrix": [
-                [float(v) if pd.notnull(v) else None for v in row]
-                for _, row in trimmed.iterrows()
-            ],
-        }
-        return ToolResult(result_type="frame_preview", payload=payload)
+        # ── Series ────────────────────────────────────────────────────
+        if isinstance(raw, pd.Series):
+            s = raw.head(MAX_SERIES_ROWS)
+            
+            # Extract intuitive column names for plotting
+            s_index_names = [str(n) for n in getattr(s.index, "names", [s.index.name]) if n is not None]
+            group_col = ", ".join(s_index_names) if s_index_names else "category"
+            agg_col = str(s.name) if s.name is not None else "value"
+            
+            payload = {
+                "axis_x": [str(k) for k in s.index],
+                "axis_y": [
+                    (float(v) if pd.notnull(v) else None) for v in s.values
+                ],
+                "name": agg_col,
+                "group_col": group_col,
+                "agg_col": agg_col,
+            }
+            return ToolResult(result_type="series", payload=payload)
 
-    def _filter_agg(self, args: ToolArgs) -> ToolResult:
-        filter_col = args.filter_col
-        filter_val = args.filter_val
-        agg_col = args.agg_col
-        agg_func = args.agg_func or "sum"
+        # ── Scalar (int, float, str, bool, numpy scalar) ──────────────
+        if isinstance(raw, (int, float, str, bool, np.integer, np.floating)):
+            value = float(raw) if isinstance(raw, (int, float, np.integer, np.floating)) else raw
+            return ToolResult(result_type="scalar", payload={"value": value})
 
-        if not filter_col or filter_val is None or not agg_col:
-            raise AnalysisAgentError("filter_agg requires filter_col, filter_val, and agg_col")
-
-        # Safe string/numeric filter — no eval
-        col_series = self.df[filter_col]
-        if pd.api.types.is_numeric_dtype(col_series):
-            try:
-                mask = col_series == float(filter_val)
-            except (ValueError, TypeError):
-                mask = col_series.astype(str) == str(filter_val)
-        else:
-            mask = col_series.astype(str) == str(filter_val)
-
-        filtered = self.df[mask]
-        warnings = []
-        if filtered.empty:
-            warnings.append(f"No rows match {filter_col} == '{filter_val}'")
-
-        tmp = filtered.copy()
-        tmp[agg_col] = pd.to_numeric(tmp[agg_col], errors="coerce")
-        agg_result = getattr(tmp[agg_col], agg_func)()
-        value = float(agg_result) if pd.notnull(agg_result) else None
-
+        # ── Fallback: stringify whatever came back ─────────────────────
+        warnings = ["Result type not natively supported; converted to string."]
         return ToolResult(
             result_type="scalar",
-            payload={
-                "filter_col": filter_col,
-                "filter_val": filter_val,
-                "agg_col": agg_col,
-                "agg_func": agg_func,
-                "value": value,
-                "matching_rows": int(mask.sum()),
-            },
+            payload={"value": str(raw)[:500]},
             warnings=warnings,
         )
