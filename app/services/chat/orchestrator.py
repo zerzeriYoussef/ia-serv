@@ -63,7 +63,7 @@ You are a data analytics orchestrator. Your ONLY job is to produce a structured 
 
 Output a single JSON object with these EXACT keys:
 {
-  "intent": "<one of: retrieve_only | analyze | visualize | clarify | refuse_unsafe>",
+  "intent": "<one of: retrieve_only | analyze | visualize | clarify | generate_report | refuse_unsafe>",
   "tool_calls": [ ... ],
   "needs_chart": <true|false>,
   "clarification_question": "<string or null>",
@@ -71,7 +71,7 @@ Output a single JSON object with these EXACT keys:
 }
 
 RULES:
-1. intent must be exactly one of: retrieve_only, analyze, visualize, clarify, refuse_unsafe
+1. intent must be exactly one of: retrieve_only, analyze, visualize, clarify, generate_report, refuse_unsafe
 2. refuse_unsafe ONLY if the question explicitly asks to delete, drop, overwrite data, or access
    credentials/PII. Analytics questions (even complex ones) must NEVER be refused.
 3. Each tool_call has exactly two fields:
@@ -96,6 +96,11 @@ RULES:
     Prefer analyze with concrete code_expr over intent=clarify unless the question
     truly cannot be resolved from context.
 14. If still ambiguous after checking conversation context, intent=clarify.
+15. IMPLICIT/SPECULATIVE ANALYSIS: Questions like "I wonder if X affects Y", "Could X improve Y",
+    "Is there a link between X and Y", or "What if..." ARE analysis questions. Do NOT use
+    retrieve_only. You MUST use intent=analyze and provide a tool_call (e.g. corr(), 
+    groupby().mean()) to test the hypothesis against the data.
+16. GENERATE REPORT: If the user explicitly asks for a "report", "comprehensive summary", "executive summary", or "generate a report", you MUST use intent=generate_report and leave tool_calls empty.
 
 EXAMPLES (valid tool_calls shapes):
 {"code_expr": "df['revenue'].describe()", "label": "Revenue stats"}
@@ -113,6 +118,7 @@ Be concise, clear, and specific. Use plain language.
 Do NOT mention internal implementation details, column names as variables, or code.
 If citing retrieved facts, reference them naturally (not as [chunk_id] codes).
 If tool results are available, interpret them directly — do not say "based on the data".
+If a chart is generated, DO NOT apologize or state that you cannot display graphical charts. The frontend UI will render the chart automatically. Simply describe the insights from the data.
 Just give the direct answer with numbers and insights.
 End with a brief caveat if relevant (e.g., correlation ≠ causation, sample size).
 """
@@ -380,6 +386,31 @@ async def run_chat_turn(
         chunks = await retrieve_chunks(
             dataset_id, retrieval_query, top_k=settings.CHAT_RETRIEVAL_TOP_K
         )
+        
+        # Self-correcting RAG: if no chunks found, try rewriting the query
+        if not chunks:
+            logger.info("Initial retrieval returned 0 chunks, attempting query rewrite...")
+            rewrite_prompt = (
+                f"Extract only the core searchable analytical keywords from this query. "
+                f"Ignore conversational words. Provide 2-3 keywords max.\nQuery: {retrieval_query}"
+            )
+            try:
+                # We can reuse the json generator for a quick structural response or text
+                from app.services.rag.gemini_client import generate_json_response as _gen_json
+                raw_rewritten = await _gen_json(
+                    "You are a search term extractor. Output JSON: {\"keywords\": \"...\"}",
+                    rewrite_prompt,
+                    timeout_s=5.0
+                )
+                keywords = raw_rewritten.get("keywords", "")
+                if keywords:
+                    logger.info("Retrying retrieval with keywords: %s", keywords)
+                    chunks = await retrieve_chunks(
+                        dataset_id, keywords, top_k=settings.CHAT_RETRIEVAL_TOP_K
+                    )
+            except Exception as rewrite_exc:
+                logger.warning("Query rewrite failed: %s", rewrite_exc)
+
     except Exception as exc:
         logger.warning("Retrieval failed (falling back to empty): %s", exc)
         chunks = []
@@ -413,6 +444,27 @@ Produce a JSON plan with keys: intent, tool_calls, needs_chart, clarification_qu
         # Fall back to retrieve_only so the user still gets an answer
         plan = OrchestratorPlan(intent=Intent.retrieve_only, tool_calls=[], needs_chart=False)
 
+    import re
+    # ── Post-plan sanity guard for speculative questions
+    _RELATION_PATTERNS = re.compile(
+        r"\b(correlat|affect|impact|improve|relate|wonder if|cut.*hour|cause|between)\b",
+        re.IGNORECASE,
+    )
+    if plan.intent == Intent.retrieve_only and not plan.tool_calls:
+        if _RELATION_PATTERNS.search(user_message):
+            metrics = analysis_ctx.get("metrics", [])
+            if len(metrics) >= 2:
+                col_list = json.dumps(metrics)
+                plan = OrchestratorPlan(
+                    intent=Intent.analyze,
+                    tool_calls=[ToolArgs(
+                        code_expr=f"df[{col_list}].corr()",
+                        label="Correlation between numeric columns",
+                    )],
+                    needs_chart=False,
+                )
+                logger.info("chat_turn: post-plan guard upgraded speculative query to analyze with corr()")
+
     if plan.tool_calls and plan.intent in (Intent.analyze, Intent.visualize):
         pass  # No repair needed — LLM generates direct code_expr now
 
@@ -440,6 +492,15 @@ Produce a JSON plan with keys: intent, tool_calls, needs_chart, clarification_qu
 
     if plan.intent == Intent.clarify:
         msg = plan.clarification_question or "Could you clarify your question?"
+        result_out.update({"full_answer": msg, "intent": plan.intent.value, "chunk_ids": chunk_ids,
+                           "latency_ms": int((time.monotonic() - t0) * 1000)})
+        yield _sse(SseEventType.token, TokenEvent(delta=msg).model_dump())
+        yield _sse(SseEventType.done, DoneEvent(conversation_id=conversation_id, message_id=0,
+                                                 latency_ms=result_out["latency_ms"]).model_dump())
+        return
+
+    if plan.intent == Intent.generate_report:
+        msg = "I'm generating a comprehensive report for you right now based on our conversation..."
         result_out.update({"full_answer": msg, "intent": plan.intent.value, "chunk_ids": chunk_ids,
                            "latency_ms": int((time.monotonic() - t0) * 1000)})
         yield _sse(SseEventType.token, TokenEvent(delta=msg).model_dump())

@@ -56,6 +56,14 @@ class Settings(BaseSettings):
     # so follow-ups like "yes, the revenue column" stay tied to the thread.
     CHAT_PLANNER_HISTORY_MESSAGES: int = 12
 
+    # ── Report generation ──────────────────────────────────────────────────
+    # Serper Google Search API key — used by the external context agent
+    SERPER_API_KEY: Optional[str] = None
+    # Top-K chunks retrieved per topic during report RAG (5 topics × this value)
+    REPORT_RETRIEVAL_TOP_K: int = 5
+    # Redis TTL for cached reports in seconds (default 1 hour)
+    REPORT_CACHE_TTL: int = 3600
+
     class Config:  #i will later change setting above for better security
         env_file = ".env"
         case_sensitive = True

@@ -190,20 +190,27 @@ async def stream_text_response(
                         f.write(f"Stream Error (no text context): {e.response.status_code}\n")
                 raise
                 
-            async for line in resp.aiter_lines():
-                if not line.startswith("data:"):
-                    continue
-                raw = line[len("data:"):].strip()
-                if not raw or raw == "[DONE]":
-                    continue
-                try:
-                    chunk = json.loads(raw)
-                except json.JSONDecodeError:
-                    continue
-                candidates = chunk.get("candidates") or []
-                for cand in candidates:
-                    parts = (cand.get("content") or {}).get("parts") or []
-                    for part in parts:
-                        delta = part.get("text", "")
-                        if delta:
-                            yield delta
+            # Use aiter_bytes() + manual line buffering so every Gemini SSE chunk
+            # is parsed and yielded immediately — aiter_lines() can buffer internally.
+            line_buf = ""
+            async for raw_bytes in resp.aiter_bytes():
+                line_buf += raw_bytes.decode("utf-8", errors="replace")
+                while "\n" in line_buf:
+                    line, line_buf = line_buf.split("\n", 1)
+                    line = line.rstrip("\r")
+                    if not line.startswith("data:"):
+                        continue
+                    raw = line[len("data:"):].strip()
+                    if not raw or raw == "[DONE]":
+                        continue
+                    try:
+                        chunk = json.loads(raw)
+                    except json.JSONDecodeError:
+                        continue
+                    candidates = chunk.get("candidates") or []
+                    for cand in candidates:
+                        parts = (cand.get("content") or {}).get("parts") or []
+                        for part in parts:
+                            delta = part.get("text", "")
+                            if delta:
+                                yield delta

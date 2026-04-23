@@ -43,3 +43,10 @@ pytest-asyncio>=0.23.3
 black>=24.1.1
 isort>=5.13.2
 alembic>=1.18.4
+
+# Report / LangChain dependencies
+langchain>=0.1.0
+langchain-google-genai>=1.0.0
+langchain-community>=0.0.30
+langchain-chroma>=0.1.0
+google-search-results>=2.4.2

@@ -90,11 +90,12 @@ class ChartSpec(BaseModel):
 # ---------------------------------------------------------------------------
 
 class Intent(str, Enum):
-    retrieve_only = "retrieve_only"
-    analyze       = "analyze"
-    visualize     = "visualize"
-    clarify       = "clarify"
-    refuse_unsafe = "refuse_unsafe"
+    retrieve_only   = "retrieve_only"
+    analyze         = "analyze"
+    visualize       = "visualize"
+    clarify         = "clarify"
+    generate_report = "generate_report"
+    refuse_unsafe   = "refuse_unsafe"
 
 
 class OrchestratorPlan(BaseModel):

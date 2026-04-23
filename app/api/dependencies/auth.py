@@ -12,7 +12,7 @@ import logging
 from dataclasses import dataclass
 from typing import Optional
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import ExpiredSignatureError, JWTError, jwt
 
@@ -87,6 +87,7 @@ def _decode_token(token: str) -> CurrentUser:
 # ---------------------------------------------------------------------------
 
 async def get_current_user(
+    request: Request,
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(_bearer_scheme),
 ) -> Optional[CurrentUser]:
     """
@@ -95,12 +96,18 @@ async def get_current_user(
 
     Use this when the endpoint works for both anonymous and authenticated users.
     """
-    if credentials is None:
-        return None
-    return _decode_token(credentials.credentials)
+    if credentials is not None:
+        return _decode_token(credentials.credentials)
+        
+    token = request.query_params.get("access_token")
+    if token:
+        return _decode_token(token)
+
+    return None
 
 
 async def require_auth(
+    request: Request,
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(_bearer_scheme),
 ) -> CurrentUser:
     """
@@ -109,14 +116,19 @@ async def require_auth(
     Inject as ``Depends(require_auth)`` on any route that must be authenticated.
     Returns a ``CurrentUser`` with at least ``user_id`` and ``role``.
     """
-    if credentials is None:
-        logger.warning("Auth required but no Authorization header provided")
+    if credentials is not None:
+        token = credentials.credentials
+    else:
+        token = request.query_params.get("access_token")
+        
+    if not token:
+        logger.warning("Auth required but no Authorization header or access_token provided")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Authentication required",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    return _decode_token(credentials.credentials)
+    return _decode_token(token)
 
 
 async def require_admin(
