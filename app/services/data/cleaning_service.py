@@ -1,3 +1,4 @@
+import re
 import pandas as pd
 import numpy as np
 from typing import Dict, List, Tuple, Optional
@@ -8,411 +9,754 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+# Default tokens treated as missing values when found in object columns.
+# Matched case-insensitively, against values that are already whitespace-stripped.
+_DEFAULT_MISSING_TOKENS = {
+    "",
+    "na",
+    "n/a",
+    "nan",
+    "null",
+    "none",
+    "-",
+    "--",
+    "?",
+}
+
+
 class CleaningService:
     """Service for cleaning and preprocessing data"""
-    
+
+    @staticmethod
+    def _default_duplicate_subset(df: pd.DataFrame) -> Optional[List[str]]:
+        """
+        Choose a safer default subset for duplicate detection.
+
+        If an `id` column exists, we exclude it so records that are identical
+        except for their identifier can still be flagged as duplicates.
+        """
+        cols = list(df.columns)
+        if "id" in cols and len(cols) > 1:
+            subset = [c for c in cols if c != "id"]
+            return subset or None
+        return None
+
     @staticmethod
     def clean_dataframe(
         df: pd.DataFrame,
         profile: Dict
     ) -> Tuple[pd.DataFrame, Dict]:
         """
-        Clean dataframe based on cleaning profile
-        
-        Args:
-            df: Input dataframe
-            profile: Cleaning configuration
-            
-        Returns:
-            Tuple of (cleaned_df, cleaning_report)
+        Clean dataframe based on cleaning profile.
+
+        Pipeline order (designed so each step's stats reflect observed data):
+            text -> missing-tokens -> types -> outliers -> missing-values
+            -> duplicates -> dates
         """
-        report = {
+        original_columns = list(df.columns)
+        report: Dict = {
             "rows_before": len(df),
             "operations": [],
-            "changes": {}
+            "changes": {},
+            "summary": {},
         }
-        
+
         df_clean = df.copy()
-        
-        # 1. Text cleaning (should be done early to strip whitespace before type conversion)
+        missing_before_total = int(df_clean.isnull().sum().sum())
+
         if profile.get("strip_whitespace", False):
-            df_clean = CleaningService._clean_text(
+            CleaningService._clean_text_inplace(
                 df_clean,
-                standardize=profile.get("standardize_text", False)
+                standardize=profile.get("standardize_text", False),
             )
             report["operations"].append("text_cleaning")
-            
-        # 2. Fix data types (must be done before missing values to know true types)
+
+        column_rules = profile.get("column_rules") or {}
+
+        df_clean, missing_tokens_report = CleaningService._normalize_missing_tokens(
+            df_clean,
+            column_rules=column_rules,
+        )
+        if missing_tokens_report.get("tokens_normalized", 0) > 0:
+            report["operations"].append("missing_tokens")
+            report["changes"]["missing_tokens"] = missing_tokens_report
+
         if profile.get("fix_data_types", False):
-            df_clean, type_report = CleaningService._fix_data_types(df_clean)
+            df_clean, type_report = CleaningService._fix_data_types(
+                df_clean,
+                min_rate=float(profile.get("numeric_coerce_min_rate") or 0.8),
+                explicit_date_format=profile.get("date_format"),
+            )
             report["operations"].append("data_types")
             report["changes"]["data_types"] = type_report
-            
-        # 3. Handle missing values
+
+        if profile.get("detect_outliers", False):
+            outlier_max_rows = int(profile.get("outlier_max_rows") or 500_000)
+            if len(df_clean) > outlier_max_rows:
+                logger.warning(
+                    "Skipping outlier detection: %s rows > limit %s",
+                    len(df_clean), outlier_max_rows,
+                )
+                report["operations"].append("outliers")
+                report["changes"]["outliers"] = {
+                    "method": profile.get("outlier_method", "iqr"),
+                    "threshold": float(profile.get("outlier_threshold") or 1.5),
+                    "action": profile.get("outlier_action", "flag"),
+                    "outliers_by_column": {},
+                    "total_outliers": 0,
+                    "skipped": True,
+                    "reason": "dataset_too_large",
+                    "max_rows": outlier_max_rows,
+                }
+            else:
+                df_clean, outlier_report = CleaningService._handle_outliers(
+                    df_clean,
+                    method=profile.get("outlier_method", "iqr"),
+                    threshold=float(profile.get("outlier_threshold") or 1.5),
+                    action=profile.get("outlier_action", "flag"),
+                    add_flag_columns=bool(profile.get("add_flag_columns", True)),
+                    save_metadata=bool(profile.get("save_outliers_metadata", False)),
+                    target_columns=profile.get("target_columns"),
+                )
+                report["operations"].append("outliers")
+                report["changes"]["outliers"] = outlier_report
+
         if profile.get("handle_missing"):
             df_clean, missing_report = CleaningService._handle_missing(
                 df_clean,
                 strategy=profile.get("handle_missing", "drop"),
-                fill_strategy=profile.get("missing_fill_strategy", "mean"),
-                fill_value=profile.get("missing_fill_value")
+                fill_strategy=profile.get("missing_fill_strategy", "auto"),
+                fill_value=profile.get("missing_fill_value"),
+                column_rules=column_rules,
             )
             report["operations"].append("missing_values")
             report["changes"]["missing_values"] = missing_report
-        
-        # 4. Remove duplicates
+
         if profile.get("remove_duplicates", False):
             df_clean, dup_report = CleaningService._remove_duplicates(
                 df_clean,
-                subset=profile.get("duplicate_subset")
+                subset=profile.get("duplicate_subset"),
+                keep=profile.get("duplicate_keep", "best"),
+                normalize_text=bool(profile.get("dedup_normalize_text", True)),
             )
             report["operations"].append("duplicates")
             report["changes"]["duplicates"] = dup_report
-        
-        # 5. Detect/handle outliers
-        if profile.get("detect_outliers", False):
-            df_clean, outlier_report = CleaningService._handle_outliers(
-                df_clean,
-                method=profile.get("outlier_method", "iqr"),
-                threshold=profile.get("outlier_threshold", 1.5),
-                action=profile.get("outlier_action", "flag")
-            )
-            report["operations"].append("outliers")
-            report["changes"]["outliers"] = outlier_report
-        
-        # 6. Date standardization
+
         if profile.get("standardize_dates", False):
             df_clean, date_report = CleaningService._standardize_dates(
                 df_clean,
-                target_format=profile.get("date_format")
+                target_format=profile.get("date_format"),
             )
             report["operations"].append("date_standardization")
             report["changes"]["dates"] = date_report
-        
+
         report["rows_after"] = len(df_clean)
         report["rows_removed"] = report["rows_before"] - report["rows_after"]
-        
+
+        cells_filled = int(
+            report["changes"].get("missing_values", {}).get("total_filled", 0)
+        )
+        added_columns = [c for c in df_clean.columns if c not in original_columns]
+        report["summary"] = {
+            "rows_before": report["rows_before"],
+            "rows_after": report["rows_after"],
+            "rows_removed": report["rows_removed"],
+            "cells_filled": cells_filled,
+            "missing_before": missing_before_total,
+            "missing_after": int(df_clean.isnull().sum().sum()),
+            "duplicates_removed": int(
+                report["changes"].get("duplicates", {}).get("duplicates_removed", 0)
+            ),
+            "outliers_total": int(
+                report["changes"].get("outliers", {}).get("total_outliers", 0)
+            ),
+            "types_changed": int(
+                report["changes"].get("data_types", {}).get("types_changed", 0)
+            ),
+            "added_columns": added_columns,
+            "operations": list(report["operations"]),
+        }
+
         return df_clean, report
-    
+
+    @staticmethod
+    def _normalize_missing_tokens(
+        df: pd.DataFrame,
+        column_rules: Optional[Dict[str, Dict]] = None,
+    ) -> Tuple[pd.DataFrame, Dict]:
+        """
+        Replace common 'missing' textual placeholders with NaN on object columns.
+
+        Recognized tokens (case-insensitive, after strip):
+            "", "na", "n/a", "nan", "null", "none", "-", "--", "?"
+
+        Per-column extra tokens may be supplied in `column_rules[col]["missing_tokens"]`.
+        """
+        column_rules = column_rules or {}
+        normalized_total = 0
+        per_column_counts: Dict[str, int] = {}
+
+        for col in df.columns:
+            if df[col].dtype != "object":
+                continue
+            extra_tokens = set()
+            rule = column_rules.get(col, {})
+            for tok in rule.get("missing_tokens", []) or []:
+                if tok is None:
+                    continue
+                extra_tokens.add(str(tok).strip().lower())
+
+            tokens = _DEFAULT_MISSING_TOKENS | extra_tokens
+
+            series = df[col]
+            stripped = series.astype("string").str.strip()
+            lowered = stripped.str.lower()
+            mask = lowered.isin(tokens) & series.notna()
+            count = int(mask.sum())
+            if count:
+                df.loc[mask, col] = np.nan
+                per_column_counts[col] = count
+                normalized_total += count
+
+        return df, {
+            "tokens_normalized": int(normalized_total),
+            "by_column": per_column_counts,
+            "tokens": sorted(_DEFAULT_MISSING_TOKENS),
+        }
+
     @staticmethod
     def _handle_missing(
         df: pd.DataFrame,
         strategy: str = "drop",
-        fill_strategy: str = "mean",
-        fill_value: Optional[str] = None
+        fill_strategy: str = "auto",
+        fill_value: Optional[str] = None,
+        column_rules: Optional[Dict[str, Dict]] = None,
     ) -> Tuple[pd.DataFrame, Dict]:
-        """Handle missing values"""
-        
+        """
+        Handle missing values.
+
+        Imputation stats are computed *excluding rows flagged as outliers in the
+        same column* (i.e. rows where `{col}_outlier == True`) so a single
+        extreme value can't pull the mean/median.
+        """
+        column_rules = column_rules or {}
         missing_before = df.isnull().sum().to_dict()
-        total_missing = df.isnull().sum().sum()
-        
+        total_missing = int(df.isnull().sum().sum())
+        rows_before = len(df)
+        rows_dropped = 0
+        total_filled = 0
+
         if strategy == "drop":
-            df_clean = df.dropna()
-            
+            df = df.dropna()
+            rows_dropped = rows_before - len(df)
+
         elif strategy == "fill":
-            df_clean = df.copy()
-            
-            for col in df_clean.columns:
-                if df_clean[col].isnull().any():
-                    
-                    if pd.api.types.is_numeric_dtype(df_clean[col]):
-                        # Numeric columns
-                        if fill_strategy == "mean":
-                            df_clean[col] = df_clean[col].fillna(df_clean[col].mean())
-                        elif fill_strategy == "median":
-                            df_clean[col] = df_clean[col].fillna(df_clean[col].median())
-                        elif fill_strategy == "mode":
-                            df_clean[col] = df_clean[col].fillna(df_clean[col].mode()[0])
-                        elif fill_strategy == "constant":
-                            df_clean[col] = df_clean[col].fillna(float(fill_value) if fill_value else 0)
-                    
-                    elif pd.api.types.is_datetime64_any_dtype(df_clean[col]):
-                        # Datetime columns
-                        if fill_strategy == "mode":
-                            df_clean[col] = df_clean[col].fillna(df_clean[col].mode()[0])
-                        elif fill_strategy == "constant" and fill_value:
-                            try:
-                                df_clean[col] = df_clean[col].fillna(pd.to_datetime(fill_value))
-                            except (ValueError, TypeError):
-                                pass  # leave na if invalid
-                        else:
-                            # Cannot reliably default-fill datetimes without domain context
-                            pass
-                            
-                    else:
-                        # Non-numeric string/categorical columns
-                        if fill_strategy == "mode":
-                            df_clean[col] = df_clean[col].fillna(df_clean[col].mode()[0])
-                        elif fill_strategy == "constant":
-                            df_clean[col] = df_clean[col].fillna(fill_value if fill_value else "Unknown")
-                        else:
-                            df_clean[col] = df_clean[col].fillna("Unknown")
-        
+            for col in df.columns:
+                if str(col).endswith("_outlier"):
+                    continue
+                if not df[col].isnull().any():
+                    continue
+
+                rule = column_rules.get(col, {})
+                col_strategy = rule.get("impute") or fill_strategy
+                col_fill_value = rule.get("fill_value")
+                if col_fill_value is None:
+                    col_fill_value = fill_value
+
+                outlier_col = f"{col}_outlier"
+                if outlier_col in df.columns:
+                    clean_mask = ~df[outlier_col].fillna(False).astype(bool)
+                    stats_series = df.loc[clean_mask, col]
+                else:
+                    stats_series = df[col]
+
+                fill = CleaningService._compute_fill_value(
+                    df[col], stats_series, col_strategy, col_fill_value
+                )
+                if fill is None:
+                    continue
+
+                df[col] = df[col].fillna(fill)
+
+            total_filled = total_missing - int(df.isnull().sum().sum())
+
         elif strategy == "interpolate":
-            df_clean = df.copy()
-            # Only interpolate numeric columns
-            numeric_cols = df_clean.select_dtypes(include=['number']).columns
-            df_clean[numeric_cols] = df_clean[numeric_cols].interpolate()
-            # Fill remaining with mode or constant
-            df_clean = df_clean.ffill().bfill()
-        
-        else:
-            df_clean = df.copy()
-        
-        missing_after = df_clean.isnull().sum().to_dict()
-        
+            numeric_cols = df.select_dtypes(include=["number"]).columns
+            df[numeric_cols] = df[numeric_cols].interpolate()
+            df = df.ffill().bfill()
+            total_filled = total_missing - int(df.isnull().sum().sum())
+
+        missing_after = df.isnull().sum().to_dict()
         report = {
             "strategy": strategy,
             "fill_strategy": fill_strategy,
             "missing_before": {k: int(v) for k, v in missing_before.items() if v > 0},
             "missing_after": {k: int(v) for k, v in missing_after.items() if v > 0},
-            "total_filled": total_missing - df_clean.isnull().sum().sum()
+            "total_filled": int(total_filled),
+            "rows_dropped": int(rows_dropped),
         }
-        
-        logger.info(f"Handled {report['total_filled']} missing values using {strategy}")
-        
-        return df_clean, report
-    
+        logger.info("Handled %s missing values using %s", total_filled, strategy)
+        return df, report
+
+    @staticmethod
+    def _compute_fill_value(
+        full_series: pd.Series,
+        stats_series: pd.Series,
+        strategy: str,
+        fill_value,
+    ):
+        """Return a single fill value for a series given a strategy."""
+        non_na = stats_series.dropna()
+        is_numeric = pd.api.types.is_numeric_dtype(full_series)
+        is_datetime = pd.api.types.is_datetime64_any_dtype(full_series)
+
+        if strategy == "constant":
+            if fill_value is None:
+                return 0 if is_numeric else "Unknown"
+            if is_numeric:
+                try:
+                    return float(fill_value)
+                except (TypeError, ValueError):
+                    return 0
+            if is_datetime:
+                try:
+                    return pd.to_datetime(fill_value)
+                except (TypeError, ValueError):
+                    return None
+            return fill_value
+
+        if non_na.empty:
+            non_na = full_series.dropna()
+        if non_na.empty:
+            return None
+
+        if is_numeric:
+            if strategy == "mean":
+                return float(non_na.mean())
+            if strategy == "median":
+                return float(non_na.median())
+            if strategy == "mode":
+                mode = non_na.mode()
+                return float(mode.iloc[0]) if len(mode) else float(non_na.median())
+            return float(non_na.median())
+
+        if is_datetime:
+            mode = non_na.mode()
+            return mode.iloc[0] if len(mode) else None
+
+        mode = non_na.mode()
+        return mode.iloc[0] if len(mode) else "Unknown"
+
     @staticmethod
     def _remove_duplicates(
         df: pd.DataFrame,
-        subset: Optional[List[str]] = None
+        subset: Optional[List[str]] = None,
+        keep: str = "best",
+        normalize_text: bool = True,
     ) -> Tuple[pd.DataFrame, Dict]:
-        """Remove duplicate rows"""
-        
-        duplicates_before = df.duplicated(subset=subset).sum()
-        df_clean = df.drop_duplicates(subset=subset, keep='first')
-        duplicates_removed = duplicates_before
-        
+        """
+        Remove duplicate rows.
+
+        Args:
+            keep: "first", "last" or "best". "best" keeps the row with the most
+                non-null values within each duplicate group.
+            normalize_text: when True, build a temporary normalized key
+                (strip + lower + collapse whitespace) on object columns for
+                matching only. Original values are preserved.
+        """
+        effective_subset = subset if subset else CleaningService._default_duplicate_subset(df)
+        if effective_subset:
+            effective_subset = [
+                c for c in effective_subset
+                if c in df.columns and not str(c).endswith("_outlier")
+            ] or None
+
+        if effective_subset is None:
+            key_cols = [c for c in df.columns if not str(c).endswith("_outlier")]
+        else:
+            key_cols = effective_subset
+
+        if not key_cols or len(df) == 0:
+            return df, {
+                "duplicates_found": 0,
+                "duplicates_removed": 0,
+                "subset": subset,
+                "effective_subset": effective_subset,
+                "keep": keep,
+                "normalize_text": normalize_text,
+            }
+
+        if normalize_text:
+            key_df = df[key_cols].copy()
+            for kc in key_cols:
+                if key_df[kc].dtype == "object":
+                    key_df[kc] = (
+                        key_df[kc].astype("string")
+                        .str.strip()
+                        .str.lower()
+                        .str.replace(r"\s+", " ", regex=True)
+                    )
+        else:
+            key_df = df[key_cols]
+
+        duplicates_before = int(key_df.duplicated().sum())
+
+        if keep == "best" and duplicates_before > 0:
+            non_null_count = df.notna().sum(axis=1)
+            order = non_null_count.sort_values(ascending=False, kind="stable").index
+            key_sorted = key_df.loc[order]
+            keep_mask_sorted = ~key_sorted.duplicated(keep="first")
+            kept_idx = order[keep_mask_sorted]
+            df_clean = df.loc[kept_idx].sort_index()
+        else:
+            pandas_keep = "first" if keep == "best" else keep
+            df_clean = df.loc[~key_df.duplicated(keep=pandas_keep)]
+
+        duplicates_removed = len(df) - len(df_clean)
         report = {
             "duplicates_found": int(duplicates_before),
             "duplicates_removed": int(duplicates_removed),
-            "subset": subset
+            "subset": subset,
+            "effective_subset": effective_subset,
+            "keep": keep,
+            "normalize_text": normalize_text,
         }
-        
-        logger.info(f"Removed {duplicates_removed} duplicate rows")
-        
+        logger.info("Removed %s duplicate rows (keep=%s)", duplicates_removed, keep)
         return df_clean, report
-    
+
     @staticmethod
-    def _fix_data_types(df: pd.DataFrame) -> Tuple[pd.DataFrame, Dict]:
-        """Auto-detect and fix data types by coercing gracefully"""
-        
-        df_clean = df.copy()
-        type_changes = {}
-        
-        for col in df_clean.columns:
-            original_type = str(df_clean[col].dtype)
-            
-            if df_clean[col].dtype == 'object':
-                non_na = df_clean[col].dropna()
-                if len(non_na) == 0:
+    def _fix_data_types(
+        df: pd.DataFrame,
+        min_rate: float = 0.8,
+        explicit_date_format: Optional[str] = None,
+    ) -> Tuple[pd.DataFrame, Dict]:
+        """Auto-detect and fix data types by coercing gracefully.
+
+        - Numeric coercion only fires when at least `min_rate` of non-null values
+          parse as numbers (default 0.8) to avoid silently nuking text columns.
+        - Date coercion: if no explicit format is given and parsing with
+          `dayfirst=True` and `dayfirst=False` disagrees on >5% of values, the
+          column is flagged as ambiguous and *not* coerced.
+        """
+        type_changes: Dict[str, Dict[str, str]] = {}
+        ambiguous_dates: List[str] = []
+
+        for col in df.columns:
+            if str(col).endswith("_outlier"):
+                continue
+            original_type = str(df[col].dtype)
+            if df[col].dtype != "object":
+                continue
+
+            non_na = df[col].dropna()
+            if len(non_na) == 0:
+                continue
+
+            num_coerced = pd.to_numeric(non_na, errors="coerce")
+            num_success_rate = float(num_coerced.notna().mean())
+            if num_success_rate >= min_rate:
+                df[col] = pd.to_numeric(df[col], errors="coerce")
+                type_changes[col] = {
+                    "from": original_type,
+                    "to": str(df[col].dtype),
+                }
+                continue
+
+            try:
+                date_default = pd.to_datetime(
+                    non_na, errors="coerce", format="mixed", dayfirst=False
+                )
+            except TypeError:
+                date_default = pd.to_datetime(non_na, errors="coerce")
+            date_success_rate = float(date_default.notna().mean())
+
+            if date_success_rate < 0.3:
+                continue
+
+            if not explicit_date_format:
+                try:
+                    date_dayfirst = pd.to_datetime(
+                        non_na, errors="coerce", format="mixed", dayfirst=True
+                    )
+                except TypeError:
+                    date_dayfirst = pd.to_datetime(
+                        non_na, errors="coerce", dayfirst=True
+                    )
+                both_ok = date_default.notna() & date_dayfirst.notna()
+                if both_ok.any():
+                    diff_rate = float(
+                        (date_default[both_ok] != date_dayfirst[both_ok]).mean()
+                    )
+                else:
+                    diff_rate = 0.0
+                if diff_rate > 0.05:
+                    ambiguous_dates.append(str(col))
                     continue
-                    
-                # 1. Try to convert to numeric gracefully
-                num_coerced = pd.to_numeric(non_na, errors='coerce')
-                num_success_rate = num_coerced.notna().mean()
-                
-                # If more than 30% of non-null values are numbers, treat as numeric column
-                if num_success_rate > 0.3:
-                    df_clean[col] = pd.to_numeric(df_clean[col], errors='coerce')
-                    type_changes[col] = {
-                        "from": original_type,
-                        "to": str(df_clean[col].dtype)
-                    }
-                    continue
-                
-                # 2. Try to convert to datetime gracefully
-                date_coerced = pd.to_datetime(non_na, errors='coerce')
-                date_success_rate = date_coerced.notna().mean()
-                
-                # If more than 30% of non-null values are valid dates, treat as datetime column
-                if date_success_rate > 0.3:
-                    df_clean[col] = pd.to_datetime(df_clean[col], errors='coerce')
-                    type_changes[col] = {
-                        "from": original_type,
-                        "to": "datetime64[ns]" # standardized date representation
-                    }
-                    continue
-        
-        report = {
+
+            try:
+                df[col] = pd.to_datetime(
+                    df[col], errors="coerce", format="mixed", dayfirst=False
+                )
+            except TypeError:
+                df[col] = pd.to_datetime(df[col], errors="coerce")
+            type_changes[col] = {
+                "from": original_type,
+                "to": "datetime64[ns]",
+            }
+
+        report: Dict = {
             "types_changed": len(type_changes),
-            "changes": type_changes
+            "changes": type_changes,
+            "min_rate": min_rate,
         }
-        
-        logger.info(f"Fixed {len(type_changes)} column data types")
-        
-        return df_clean, report
-    
+        if ambiguous_dates:
+            report["ambiguous_dates"] = ambiguous_dates
+        logger.info("Fixed %s column data types", len(type_changes))
+        return df, report
+
     @staticmethod
     def _handle_outliers(
         df: pd.DataFrame,
         method: str = "iqr",
         threshold: float = 1.5,
-        action: str = "flag"
+        action: str = "flag",
+        add_flag_columns: bool = True,
+        save_metadata: bool = False,
+        target_columns: Optional[List[str]] = None,
     ) -> Tuple[pd.DataFrame, Dict]:
-        """Detect and handle outliers"""
-        
-        df_clean = df.copy()
-        numeric_cols = df_clean.select_dtypes(include=['number']).columns
-        
-        outliers_detected = {}
+        """Detect and handle outliers (computed on the column's *observed* values)."""
+        numeric_cols = [
+            c for c in df.select_dtypes(include=["number"]).columns
+            if not str(c).endswith("_outlier")
+        ]
+        if target_columns:
+            target_set = set(target_columns)
+            numeric_cols = [c for c in numeric_cols if c in target_set]
+
+        if len(df) < 5:
+            return df, {
+                "method": method,
+                "threshold": threshold,
+                "action": action,
+                "outliers_by_column": {},
+                "total_outliers": 0,
+                "skipped": True,
+                "reason": "too_few_rows",
+                "min_rows": 5,
+            }
+
+        outliers_detected: Dict[str, int] = {}
         total_outliers = 0
-        
+        outlier_metadata: Dict[str, Dict] = {}
+
         for col in numeric_cols:
+            non_na = df[col].dropna()
+            outlier_mask = pd.Series(False, index=df.index)
+            lower_bound: Optional[float] = None
+            upper_bound: Optional[float] = None
+
             if method == "iqr":
-                Q1 = df_clean[col].quantile(0.25)
-                Q3 = df_clean[col].quantile(0.75)
+                if len(non_na) < 4:
+                    continue
+                Q1 = float(non_na.quantile(0.25))
+                Q3 = float(non_na.quantile(0.75))
                 IQR = Q3 - Q1
-                
                 lower_bound = Q1 - threshold * IQR
                 upper_bound = Q3 + threshold * IQR
-                
-                outlier_mask = (df_clean[col] < lower_bound) | (df_clean[col] > upper_bound)
-                
+                outlier_mask = (df[col] < lower_bound) | (df[col] > upper_bound)
+                outlier_mask = outlier_mask.fillna(False)
+
             elif method == "zscore":
-                z_scores = np.abs(stats.zscore(df_clean[col].dropna()))
-                outlier_mask = pd.Series(False, index=df_clean.index)
-                outlier_mask.loc[df_clean[col].notna()] = z_scores > threshold
-            
-            else:
-                # Default to IQR
-                outlier_mask = pd.Series(False, index=df_clean.index)
-            
-            num_outliers = outlier_mask.sum()
-            
-            if num_outliers > 0:
-                outliers_detected[col] = int(num_outliers)
-                total_outliers += num_outliers
-                
-                if action == "remove":
-                    df_clean = df_clean[~outlier_mask]
-                
-                elif action == "cap":
-                    if method == "iqr":
-                        df_clean.loc[outlier_mask & (df_clean[col] < lower_bound), col] = lower_bound
-                        df_clean.loc[outlier_mask & (df_clean[col] > upper_bound), col] = upper_bound
-                    elif method == "zscore":
-                        mean_val = df_clean[col].mean()
-                        std_val = df_clean[col].std()
-                        lower_bound_z = mean_val - threshold * std_val
-                        upper_bound_z = mean_val + threshold * std_val
-                        df_clean.loc[outlier_mask & (df_clean[col] < lower_bound_z), col] = lower_bound_z
-                        df_clean.loc[outlier_mask & (df_clean[col] > upper_bound_z), col] = upper_bound_z
-                
-                elif action == "flag":
-                    # Add a flag column
-                    df_clean[f'{col}_outlier'] = outlier_mask
-        
+                if len(non_na) < 2:
+                    continue
+                z_array = np.abs(stats.zscore(non_na))
+                z_scores = pd.Series(z_array, index=non_na.index)
+                outlier_mask.loc[non_na.index] = z_scores > threshold
+
+            num_outliers = int(outlier_mask.sum())
+            if num_outliers <= 0:
+                continue
+
+            outliers_detected[col] = num_outliers
+            total_outliers += num_outliers
+
+            if save_metadata:
+                rows = df.index[outlier_mask].tolist()
+                values = [None if pd.isna(v) else float(v) for v in df.loc[outlier_mask, col].tolist()]
+                meta = {
+                    "rows": [int(r) for r in rows],
+                    "values": values,
+                    "method": method,
+                    "threshold": threshold,
+                }
+                if lower_bound is not None and upper_bound is not None:
+                    meta["lower_bound"] = float(lower_bound)
+                    meta["upper_bound"] = float(upper_bound)
+                outlier_metadata[col] = meta
+
+            if action == "remove":
+                df = df.loc[~outlier_mask]
+            elif action == "cap":
+                if method == "iqr" and lower_bound is not None and upper_bound is not None:
+                    df.loc[outlier_mask & (df[col] < lower_bound), col] = lower_bound
+                    df.loc[outlier_mask & (df[col] > upper_bound), col] = upper_bound
+                elif method == "zscore":
+                    mean_val = float(non_na.mean())
+                    std_val = float(non_na.std())
+                    lb = mean_val - threshold * std_val
+                    ub = mean_val + threshold * std_val
+                    df.loc[outlier_mask & (df[col] < lb), col] = lb
+                    df.loc[outlier_mask & (df[col] > ub), col] = ub
+            elif action == "flag" and add_flag_columns:
+                df[f"{col}_outlier"] = outlier_mask
+
         report = {
             "method": method,
             "threshold": threshold,
             "action": action,
+            "add_flag_columns": add_flag_columns,
+            "save_outliers_metadata": save_metadata,
+            "target_columns": target_columns,
             "outliers_by_column": outliers_detected,
-            "total_outliers": total_outliers
+            "total_outliers": int(total_outliers),
         }
-        
-        logger.info(f"Detected {total_outliers} outliers using {method} method")
-        
-        return df_clean, report
-    
+        if save_metadata:
+            report["metadata"] = outlier_metadata
+        logger.info("Detected %s outliers using %s method", total_outliers, method)
+        return df, report
+
     @staticmethod
-    def _clean_text(
-        df: pd.DataFrame,
-        standardize: bool = False
-    ) -> pd.DataFrame:
-        """Clean text columns"""
-        
-        df_clean = df.copy()
-        text_cols = df_clean.select_dtypes(include=['object']).columns
-        
+    def _clean_text_inplace(df: pd.DataFrame, standardize: bool = False) -> None:
+        """Strip whitespace (and optionally standardize) text columns in place."""
+        text_cols = df.select_dtypes(include=["object"]).columns
         for col in text_cols:
-            # Strip whitespace
-            df_clean[col] = df_clean[col].str.strip()
-            
+            df[col] = df[col].str.strip()
             if standardize:
-                # Lowercase
-                df_clean[col] = df_clean[col].str.lower()
-                # Remove extra spaces
-                df_clean[col] = df_clean[col].str.replace(r'\s+', ' ', regex=True)
-        
-        return df_clean
-    
+                df[col] = df[col].str.lower()
+                df[col] = df[col].str.replace(r"\s+", " ", regex=True)
+
+    @staticmethod
+    def _clean_text(df: pd.DataFrame, standardize: bool = False) -> pd.DataFrame:
+        """Compatibility wrapper kept for callers expecting a copy."""
+        out = df.copy()
+        CleaningService._clean_text_inplace(out, standardize=standardize)
+        return out
+
     @staticmethod
     def _standardize_dates(
         df: pd.DataFrame,
-        target_format: Optional[str] = None
+        target_format: Optional[str] = None,
     ) -> Tuple[pd.DataFrame, Dict]:
-        """Standardize date columns"""
-        
-        df_clean = df.copy()
-        date_cols = df_clean.select_dtypes(include=['datetime64']).columns
-        
-        changes = {}
-        
+        """Standardize date columns.
+
+        If `target_format` is supplied, datetime columns are formatted as strings
+        using that format (e.g. `%Y-%m-%d`). Otherwise the columns are left as
+        `datetime64[ns]` so downstream tools keep a strong type.
+        """
+        date_cols = df.select_dtypes(include=["datetime64"]).columns
+        changes: Dict[str, str] = {}
         for col in date_cols:
             if target_format:
-                df_clean[col] = df_clean[col].dt.strftime(target_format)
+                df[col] = df[col].dt.strftime(target_format)
                 changes[col] = f"Formatted to {target_format}"
-        
-        report = {
+        return df, {
             "date_columns": list(date_cols),
             "format": target_format,
-            "changes": changes
+            "changes": changes,
         }
-        
-        return df_clean, report
-    
+
     @staticmethod
     def get_data_quality_report(df: pd.DataFrame) -> Dict:
-        """Generate comprehensive data quality report"""
-        
-        report = {
+        """Generate comprehensive data quality report."""
+        if len(df) == 0:
+            return {
+                "total_rows": 0,
+                "total_columns": len(df.columns),
+                "memory_usage_mb": 0,
+                "missing_values": {"total": 0, "by_column": {}, "percentage": 0},
+                "duplicates": {"count": 0, "percentage": 0, "effective_subset": None},
+                "data_types": df.dtypes.astype(str).to_dict(),
+                "numeric_summary": {},
+                "categorical_summary": {},
+                "by_column": {},
+            }
+
+        dup_subset = CleaningService._default_duplicate_subset(df)
+        dup_count = int(df.duplicated(subset=dup_subset).sum())
+
+        total_cells = len(df) * len(df.columns)
+        missing_total = int(df.isnull().sum().sum())
+
+        report: Dict = {
             "total_rows": len(df),
             "total_columns": len(df.columns),
             "memory_usage_mb": df.memory_usage(deep=True).sum() / (1024 * 1024),
-            
-            # Missing values
             "missing_values": {
-                "total": int(df.isnull().sum().sum()),
-                "by_column": {col: int(count) for col, count in df.isnull().sum().items() if count > 0},
-                "percentage": round(df.isnull().sum().sum() / (len(df) * len(df.columns)) * 100, 2)
+                "total": missing_total,
+                "by_column": {
+                    col: int(count) for col, count in df.isnull().sum().items() if count > 0
+                },
+                "percentage": round(missing_total / total_cells * 100, 2) if total_cells else 0,
             },
-            
-            # Duplicates
             "duplicates": {
-                "count": int(df.duplicated().sum()),
-                "percentage": round(df.duplicated().sum() / len(df) * 100, 2)
+                "count": dup_count,
+                "percentage": round((dup_count / len(df)) * 100, 2),
+                "effective_subset": dup_subset,
             },
-            
-            # Data types
             "data_types": df.dtypes.astype(str).to_dict(),
-            
-            # Numeric columns statistics
             "numeric_summary": {},
-            
-            # Categorical columns
-            "categorical_summary": {}
+            "categorical_summary": {},
+            "by_column": {},
         }
-        
-        # Numeric statistics
-        numeric_cols = df.select_dtypes(include=['number']).columns
+
+        outlier_flag_cols = {
+            c[: -len("_outlier")]: c for c in df.columns if str(c).endswith("_outlier")
+        }
+
+        numeric_cols = df.select_dtypes(include=["number"]).columns
         for col in numeric_cols:
+            if str(col).endswith("_outlier"):
+                continue
             report["numeric_summary"][col] = {
                 "mean": float(df[col].mean()) if not df[col].isnull().all() else None,
                 "median": float(df[col].median()) if not df[col].isnull().all() else None,
                 "std": float(df[col].std()) if not df[col].isnull().all() else None,
                 "min": float(df[col].min()) if not df[col].isnull().all() else None,
                 "max": float(df[col].max()) if not df[col].isnull().all() else None,
-                "missing": int(df[col].isnull().sum())
+                "missing": int(df[col].isnull().sum()),
             }
-        
-        # Categorical statistics
-        categorical_cols = df.select_dtypes(include=['object', 'category']).columns
+
+        categorical_cols = df.select_dtypes(include=["object", "category"]).columns
         for col in categorical_cols:
             report["categorical_summary"][col] = {
                 "unique_values": int(df[col].nunique()),
                 "most_common": df[col].mode()[0] if len(df[col].mode()) > 0 else None,
-                "missing": int(df[col].isnull().sum())
+                "missing": int(df[col].isnull().sum()),
             }
-        
+
+        for col in df.columns:
+            if str(col).endswith("_outlier"):
+                continue
+            missing = int(df[col].isnull().sum())
+            missing_pct = round(missing / len(df) * 100, 2)
+            unique = int(df[col].nunique(dropna=True))
+            unique_pct = round(unique / len(df) * 100, 2)
+            outlier_count = 0
+            flag_col = outlier_flag_cols.get(col)
+            if flag_col:
+                try:
+                    outlier_count = int(df[flag_col].fillna(False).astype(bool).sum())
+                except Exception:
+                    outlier_count = 0
+            completeness = round(100 - missing_pct, 2)
+            report["by_column"][col] = {
+                "dtype": str(df[col].dtype),
+                "missing": missing,
+                "missing_pct": missing_pct,
+                "unique": unique,
+                "unique_pct": unique_pct,
+                "outlier_count": outlier_count,
+                "completeness_score": completeness,
+            }
+
         return report

@@ -89,3 +89,22 @@ class CleaningLogRepository:
             .order_by(CleaningLog.created_at.desc())
         )
         return result.scalars().all()
+
+    @staticmethod
+    async def get_by_id(db: AsyncSession, log_id: int) -> Optional[CleaningLog]:
+        """Get cleaning log by ID"""
+        result = await db.execute(
+            select(CleaningLog).where(CleaningLog.id == log_id)
+        )
+        return result.scalar_one_or_none()
+
+    @staticmethod
+    async def get_latest_by_dataset(db: AsyncSession, dataset_id: int) -> Optional[CleaningLog]:
+        """Get latest cleaning log for dataset"""
+        result = await db.execute(
+            select(CleaningLog)
+            .where(CleaningLog.dataset_id == dataset_id)
+            .order_by(CleaningLog.created_at.desc())
+            .limit(1)
+        )
+        return result.scalar_one_or_none()
