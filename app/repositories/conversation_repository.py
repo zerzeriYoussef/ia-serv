@@ -98,7 +98,7 @@ class ConversationRepository:
         conversation_id: int,
         *,
         limit: int = 20,
-    ) -> List[ChatMessage]:
+    ) -> List[ChatMessage]: 
         """Return most-recent messages first (caller reverses for chronological order)."""
         result = await db.execute(
             select(ChatMessage)

@@ -25,6 +25,7 @@ setuptools<82
 # SQLAlchemy 2.0.31+ includes fixes for Python 3.13 compatibility
 sqlalchemy>=2.0.31
 asyncpg>=0.29.0
+psycopg2-binary>=2.9.9
 # This version supports the redis.asyncio namespace natively
 redis>=5.0.1
 

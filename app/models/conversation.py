@@ -65,7 +65,7 @@ class ChatMessage(Base):
     content = Column(Text, nullable=False)
 
     # Observability fields (nullable — only set on assistant turns)
-    intent = Column(String, nullable=True)          # Intent enum value
+    intent = Column(String, nullable=True)          # analyse wla calcul
     tool_calls = Column(JSON, nullable=True)        # list[ToolArgs] as dicts
     chunk_ids = Column(JSON, nullable=True)         # list[str] retrieved chunk IDs
     latency_ms = Column(Integer, nullable=True)     # wall-clock ms for the full turn

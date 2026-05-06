@@ -13,6 +13,8 @@ from app.api.v1.routes import analysis
 from app.api.v1.routes import rag
 from app.api.v1.routes import chat
 from app.api.v1.routes import report
+from app.api.v1.routes import internal
+from app.api.v1.routes import stats
 
 # Lifespan context manager for startup/shutdown events
 @asynccontextmanager
@@ -57,6 +59,8 @@ app.include_router(analysis.router, prefix="/api/v1", tags=["Analysis"])
 app.include_router(rag.router, prefix="/api/v1", tags=["RAG"])
 app.include_router(chat.router, prefix="/api/v1", tags=["Chat"])
 app.include_router(report.router, prefix="/api/v1", tags=["Reports"])
+app.include_router(internal.router, prefix="/api/v1", tags=["Internal"])
+app.include_router(stats.router, prefix="/api/v1", tags=["Stats"])
 
 # Health check endpoint
 @app.get("/health")

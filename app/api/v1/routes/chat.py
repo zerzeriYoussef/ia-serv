@@ -205,7 +205,7 @@ async def ask_message(
     """
     _require_gemini()
     conv = await _get_conversation_or_404(db, dataset_id, conversation_id)
-
+    
     # Persist user message
     user_msg = await ConversationRepository.add_message(
         db,

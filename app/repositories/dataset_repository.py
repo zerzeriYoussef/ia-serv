@@ -112,3 +112,43 @@ class DatasetRepository:
         )
         await db.commit()
         return result.rowcount > 0
+
+    @staticmethod
+    async def delete_by_user_id(db: AsyncSession, user_id: str) -> int:
+        """Bulk-delete every dataset belonging to a user and all related tables.
+
+        Returns the number of dataset rows deleted. Callers are responsible for
+        deleting the physical files *before* calling this method.
+        """
+        # Get all dataset IDs for this user
+        result = await db.execute(select(Dataset.id).where(Dataset.user_id == user_id))
+        dataset_ids = result.scalars().all()
+
+        if not dataset_ids:
+            return 0
+
+        # Import all related models to handle cascades manually
+        from app.models.column_analysis import ColumnAnalysis
+        from app.models.dashboard import Dashboard
+        from app.models.conversation import Conversation, ChatMessage
+        from app.models.cleaning_profile import CleaningLog
+
+        # 1. Delete ChatMessages linked to the user's conversations
+        conv_result = await db.execute(select(Conversation.id).where(Conversation.dataset_id.in_(dataset_ids)))
+        conv_ids = conv_result.scalars().all()
+        if conv_ids:
+            await db.execute(delete(ChatMessage).where(ChatMessage.conversation_id.in_(conv_ids)))
+
+        # 2. Delete the rest of the dependent tables
+        await db.execute(delete(Conversation).where(Conversation.dataset_id.in_(dataset_ids)))
+        await db.execute(delete(Dashboard).where(Dashboard.dataset_id.in_(dataset_ids)))
+        await db.execute(delete(CleaningLog).where(CleaningLog.dataset_id.in_(dataset_ids)))
+        await db.execute(delete(ColumnAnalysis).where(ColumnAnalysis.dataset_id.in_(dataset_ids)))
+
+        # 3. Finally delete the datasets themselves
+        final_result = await db.execute(delete(Dataset).where(Dataset.id.in_(dataset_ids)))
+        await db.execute(delete(Dataset).where(Dataset.user_id == user_id)) # just to be totally safe
+        await db.commit()
+        
+        logger.info("Deleted %d datasets for user_id=%s", final_result.rowcount, user_id)
+        return final_result.rowcount
