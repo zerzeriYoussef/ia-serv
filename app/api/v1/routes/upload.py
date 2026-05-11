@@ -87,6 +87,26 @@ async def process_file_background(dataset_id: int, file_path: str, file_type: st
             except Exception as exc:
                 logger.error(f"Auto-analysis failed for dataset {dataset_id}: {exc}")
 
+            # ── Background scan (read-only, non-fatal) ──────────────────────
+            try:
+                from app.services.data.scan_service import ScanService
+                scan_result = ScanService.scan_dataframe(df)
+
+                # Merge scan_result into the existing summary_stats JSON column
+                dataset_row = await DatasetRepository.get_by_id(db, dataset_id)
+                existing_stats = dict(dataset_row.summary_stats or {})
+                existing_stats["scan_result"] = scan_result
+                await DatasetRepository.update_metadata(db, dataset_id, {
+                    "summary_stats": existing_stats
+                })
+                await db.commit()
+                logger.info(
+                    "Background scan complete for dataset %s: %s issue(s)",
+                    dataset_id, scan_result["total_issues"]
+                )
+            except Exception as exc:
+                logger.warning("Background scan failed for dataset %s (non-fatal): %s", dataset_id, exc)
+
         except Exception as exc:
             logger.error(f"Error processing dataset {dataset_id}: {exc}")
             await DatasetRepository.update_status(db, dataset_id, DatasetStatus.FAILED)
@@ -227,7 +247,46 @@ async def get_dataset(
     return dataset
 
 
-# Deleted old positions of list_all_datasets and list_my_datasets to move them up
+# ---------------------------------------------------------------------------
+# Preview dataset rows
+# ---------------------------------------------------------------------------
+
+@router.get("/datasets/{dataset_id}/preview")
+async def preview_dataset(
+    dataset_id: int,
+    limit: int = 50,
+    db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(require_auth),
+):
+    """
+    Retrieve raw data rows for a dataset (preview).
+    """
+    dataset = await DatasetRepository.get_by_id(db, dataset_id)
+    if not dataset:
+        raise HTTPException(status_code=404, detail=f"Dataset {dataset_id} not found")
+
+    if not current_user.is_admin and dataset.user_id != current_user.user_id:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    import os
+    if not os.path.exists(dataset.file_path):
+        raise HTTPException(status_code=404, detail="Underlying file not found")
+
+    df, _ = await ParserService.parse_file(dataset.file_path, dataset.file_type)
+    
+    # Take first 'limit' rows
+    preview_df = df.head(limit)
+    
+    # Replace NaN with None for JSON serialization
+    preview_df = preview_df.replace({float('nan'): None})
+    
+    records = preview_df.to_dict(orient="records")
+    return {
+        "dataset_id": dataset_id,
+        "total_rows": len(df),
+        "columns": df.columns.tolist(),
+        "rows": records
+    }
 
 
 # ---------------------------------------------------------------------------

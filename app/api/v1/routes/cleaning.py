@@ -12,6 +12,7 @@ from app.core.database import get_db
 from app.services.data.cleaning_service import CleaningService
 from app.services.data.validation_service import ValidationService
 from app.services.data.parser_service import ParserService
+from app.services.data.scan_service import ScanService
 from app.repositories.cleaning_repository import (
     CleaningProfileRepository,
     CleaningLogRepository
@@ -57,7 +58,7 @@ async def create_cleaning_profile(
     
     new_profile = await CleaningProfileRepository.create(
         db,
-        **profile.dict()
+        **profile.dict() # i have sent multiple args not only 1arg create funct requires that
     )
     
     logger.info(f"Created cleaning profile: {new_profile.name}")
@@ -173,7 +174,7 @@ async def clean_dataset(
                 fix_data_types=True,
                 numeric_coerce_min_rate=0.8,
                 detect_outliers=True,
-                outlier_method="iqr",
+                outlier_method="auto",
                 outlier_threshold=1.5,
                 outlier_action="flag",
                 outlier_max_rows=500_000,
@@ -196,6 +197,7 @@ async def clean_dataset(
                 and (
                     getattr(profile, "handle_missing", None) == "drop"
                     or getattr(profile, "missing_fill_strategy", None) == "mean"
+                    or getattr(profile, "outlier_method", None) == "iqr"
                     or getattr(profile, "duplicate_keep", None) is None
                     or getattr(profile, "add_flag_columns", None) is True
                     or getattr(profile, "save_outliers_metadata", None) is False
@@ -218,7 +220,7 @@ async def clean_dataset(
                     fix_data_types=True,
                     numeric_coerce_min_rate=0.8,
                     detect_outliers=True,
-                    outlier_method="iqr",
+                    outlier_method="auto",
                     outlier_threshold=1.5,
                     outlier_action="flag",
                     outlier_max_rows=500_000,
@@ -259,8 +261,32 @@ async def clean_dataset(
         "standardize_text": profile.standardize_text,
         "standardize_dates": profile.standardize_dates,
         "date_format": profile.date_format,
-        "column_rules": getattr(profile, "column_rules", None),
+        "column_rules": getattr(profile, "column_rules", None) or {},
     }
+
+    # Fetch Column Analysis to handle missing identifiers
+    from app.models.column_analysis import ColumnAnalysis
+    from sqlalchemy import select
+    stmt = select(ColumnAnalysis).where(ColumnAnalysis.dataset_id == dataset_id)
+    analysis_result = await db.execute(stmt)
+    analysis = analysis_result.scalar_one_or_none()
+
+    if analysis and analysis.identifiers:
+        identifier_action = request.missing_identifier_action or getattr(profile, "missing_identifier_action", "drop")
+        column_rules = profile_dict.get("column_rules") or {}
+        
+        for col in analysis.identifiers:
+            if col not in df.columns:
+                continue
+            if col not in column_rules:
+                column_rules[col] = {}
+            if identifier_action == "drop":
+                column_rules[col]["impute"] = "drop"
+            elif identifier_action == "fill_unknown":
+                column_rules[col]["impute"] = "constant"
+                column_rules[col]["fill_value"] = "Inconnu"
+        
+        profile_dict["column_rules"] = column_rules
 
     df_clean, cleaning_report = CleaningService.clean_dataframe(df, profile_dict)
     cleaning_report = _to_native_types(cleaning_report)
@@ -310,12 +336,18 @@ async def clean_dataset(
         elif dataset.file_type in ['xlsx', 'xls']:
             df_clean.to_excel(dataset.file_path, index=False)
 
+        # Invalidate the cached scan result so it reflects the cleaned data
+        summary_stats = dict(dataset.summary_stats) if dataset.summary_stats else {}
+        if "scan_result" in summary_stats:
+            del summary_stats["scan_result"]
+
         await DatasetRepository.update_metadata(
             db,
             dataset_id,
             {
                 "row_count": len(df_clean),
-                "column_count": len(df_clean.columns)
+                "column_count": len(df_clean.columns),
+                "summary_stats": summary_stats
             }
         )
 
@@ -668,6 +700,65 @@ async def apply_outliers_action(
         "cleaning_log_id": apply_log.id,
         "outlier_apply": apply_report,
     }
+
+
+# ==================== SCAN ====================
+
+@router.get("/datasets/{dataset_id}/scan")
+async def scan_dataset(
+    dataset_id: int,
+    force: bool = True,     # TODO: remove force and use cache
+    method: str = "auto",      # "auto" | "iqr" | "mad" | "log_iqr" | "zscore" | "isolation_forest" | "lof"
+    threshold: float = 3.0,    # IQR ×3.0 = extreme outliers only
+    db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(require_auth),
+):
+    """
+    Return pre-computed scan result (cached at upload time).
+    Falls back to a live scan if the background task hasn't finished yet.
+    Pass ?force=true to bypass the cache and run a fresh scan.
+
+    Response shape:
+    {
+      dataset_id, cached, total_issues,
+      summary: { missing, missing_token, outlier, duplicate },
+      issues: [ { row_number, column, issue_type, description, current_value, severity } ]
+    }
+    """
+    dataset = await DatasetRepository.get_by_id(db, dataset_id)
+    if not dataset:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                            detail=f"Dataset {dataset_id} not found")
+    if not current_user.is_admin and dataset.user_id != current_user.user_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                            detail="You do not have access to this dataset")
+
+    # 1. Return cached scan if already computed AND not forced
+    cached_scan = (dataset.summary_stats or {}).get("scan_result")
+    if cached_scan and not force:
+        return {"dataset_id": dataset_id, "cached": True, **cached_scan}
+
+    # 2. Live scan — either forced or not yet computed
+    logger.info(
+        "Running live scan for dataset %s (force=%s, method=%s, threshold=%s)",
+        dataset_id, force, method, threshold,
+    )
+    df, _ = await ParserService.parse_file(dataset.file_path, dataset.file_type)
+    scan_result = ScanService.scan_dataframe(
+        df,
+        outlier_method=method,
+        outlier_threshold=threshold,
+    )
+
+    # 3. Persist fresh result in cache
+    try:
+        summary_stats = dict(dataset.summary_stats) if dataset.summary_stats else {}
+        summary_stats["scan_result"] = scan_result
+        await DatasetRepository.update_metadata(db, dataset_id, {"summary_stats": summary_stats})
+    except Exception as exc:
+        logger.warning("Could not persist scan cache for dataset %s: %s", dataset_id, exc)
+
+    return {"dataset_id": dataset_id, "cached": False, **scan_result}
 
 
 # ==================== VALIDATION ====================

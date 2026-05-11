@@ -76,6 +76,7 @@ class RelationshipDetector:
         has_pattern = any(pattern in col_lower for pattern in id_patterns)
 
         # PATTERN 2: Uniqueness check (primary key indicator)
+        # 
         try:
             uniqueness = df[col].nunique(dropna=True) / max(len(df), 1)
         except Exception:

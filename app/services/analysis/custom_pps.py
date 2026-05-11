@@ -33,7 +33,7 @@ class CustomPPS:
     def matrix(self, df: pd.DataFrame, sample_size: int = 5000) -> pd.DataFrame:
         """
         Calculate PPS matrix for all column pairs
-        
+        d
         Args:
             df: Input DataFrame
             sample_size: Max rows to use (for performance)

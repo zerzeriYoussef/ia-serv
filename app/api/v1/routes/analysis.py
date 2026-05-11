@@ -96,7 +96,6 @@ def _normalize_relationships(relationships: List[Dict[str, Any]]) -> List[Dict[s
 
     return normalized
 
-
 @router.post("/datasets/{dataset_id}/analyze", response_model=AnalysisResultSchema)
 async def analyze_dataset(
     dataset_id: int,

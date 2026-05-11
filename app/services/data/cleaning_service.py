@@ -3,6 +3,8 @@ import pandas as pd
 import numpy as np
 from typing import Dict, List, Tuple, Optional
 from sklearn.preprocessing import MinMaxScaler, StandardScaler, RobustScaler
+from sklearn.ensemble import IsolationForest
+from sklearn.neighbors import LocalOutlierFactor
 from scipy import stats
 import logging
 
@@ -26,6 +28,76 @@ _DEFAULT_MISSING_TOKENS = {
 
 class CleaningService:
     """Service for cleaning and preprocessing data"""
+
+    _OUTLIER_EXCLUDE_PATTERNS = {
+        "id", "_id", "code", "_code", "key", "_key",
+        "ref", "num", "number", "no", "index", "idx",
+        "sku", "barcode", "upc", "isbn", "ean",
+        "invoice", "order", "transaction", "receipt",
+        "stock", "product", "item", "ticket",
+        "uuid", "guid", "hash", "token", "session",
+        "email", "phone", "mobile", "username", "login",
+        "zip", "postal",
+    }
+
+    _QUANTITY_PATTERNS = ("qty", "quantity", "count", "units", "volume")
+    _PRICE_PATTERNS = ("price", "cost", "amount", "sales", "revenue", "total")
+    _PERCENT_PATTERNS = ("percent", "percentage", "pct", "rate", "ratio")
+
+    @staticmethod
+    def _is_outlier_identifier_column(df: pd.DataFrame, col: str) -> bool:
+        """Return True for numeric identifiers that should not be outlier-scanned."""
+        col_lower = str(col).lower()
+        metric_patterns = (
+            CleaningService._QUANTITY_PATTERNS
+            + CleaningService._PRICE_PATTERNS
+            + CleaningService._PERCENT_PATTERNS
+        )
+        if any(pattern in col_lower for pattern in metric_patterns):
+            return False
+
+        try:
+            from app.services.analysis.relationship_detector import RelationshipDetector
+
+            if RelationshipDetector._is_identifier(df, col):
+                return True
+        except Exception:
+            pass
+
+        return pd.api.types.is_numeric_dtype(df[col]) and any(
+            pattern in col_lower for pattern in CleaningService._OUTLIER_EXCLUDE_PATTERNS
+        )
+
+    @staticmethod
+    def _infer_numeric_role(col: str, series: pd.Series) -> str:
+        """Infer a loose semantic role so auto mode can choose a safer detector."""
+        col_lower = str(col).lower()
+        if any(pattern in col_lower for pattern in CleaningService._PERCENT_PATTERNS):
+            return "percentage"
+        if any(pattern in col_lower for pattern in CleaningService._QUANTITY_PATTERNS):
+            return "quantity"
+        if any(pattern in col_lower for pattern in CleaningService._PRICE_PATTERNS):
+            return "money"
+
+        non_na = series.dropna()
+        if len(non_na) and (non_na >= 0).all() and float(non_na.skew()) > 1.0:
+            return "positive_skewed"
+        return "numeric"
+
+    @staticmethod
+    def _auto_outlier_method(col: str, series: pd.Series, requested: str) -> str:
+        """Choose the concrete detector for a numeric column."""
+        if requested != "auto":
+            return requested
+
+        non_na = series.dropna()
+        if len(non_na) < 8 or non_na.nunique(dropna=True) <= 2:
+            return "skip"
+
+        role = CleaningService._infer_numeric_role(col, series)
+        if role in {"quantity", "money", "positive_skewed"}:
+            return "log_iqr"
+        return "mad"
 
     @staticmethod
     def _default_duplicate_subset(df: pd.DataFrame) -> Optional[List[str]]:
@@ -62,7 +134,7 @@ class CleaningService:
         }
 
         df_clean = df.copy()
-        missing_before_total = int(df_clean.isnull().sum().sum())
+        missing_before_total = int(df_clean.isnull().sum().sum())#counts nulls
 
         if profile.get("strip_whitespace", False):
             CleaningService._clean_text_inplace(
@@ -262,6 +334,10 @@ class CleaningService:
                 col_fill_value = rule.get("fill_value")
                 if col_fill_value is None:
                     col_fill_value = fill_value
+
+                if col_strategy == "drop":
+                    df = df.dropna(subset=[col])
+                    continue
 
                 outlier_col = f"{col}_outlier"
                 if outlier_col in df.columns:
@@ -527,7 +603,10 @@ class CleaningService:
         """Detect and handle outliers (computed on the column's *observed* values)."""
         numeric_cols = [
             c for c in df.select_dtypes(include=["number"]).columns
-            if not str(c).endswith("_outlier")
+            if (
+                not str(c).endswith("_outlier")
+                and not CleaningService._is_outlier_identifier_column(df, c)
+            )
         ]
         if target_columns:
             target_set = set(target_columns)
@@ -554,28 +633,82 @@ class CleaningService:
             outlier_mask = pd.Series(False, index=df.index)
             lower_bound: Optional[float] = None
             upper_bound: Optional[float] = None
+            effective_method = CleaningService._auto_outlier_method(col, df[col], method)
+            role = CleaningService._infer_numeric_role(col, df[col])
+            domain_mask = pd.Series(False, index=df.index)
+            if role in {"quantity", "money"}:
+                domain_mask = (df[col] < 0).fillna(False)
+            elif role == "percentage":
+                domain_mask = ((df[col] < 0) | (df[col] > 100)).fillna(False)
+            severity = "warning"
 
-            if method == "iqr":
-                if len(non_na) < 4:
-                    continue
+            if effective_method in {"iqr", "log_iqr", "mad"} and len(non_na) < 4:
+                effective_method = "skip"
+            elif effective_method == "log_iqr" and (non_na < 0).any():
+                effective_method = "skip"
+            elif effective_method == "zscore" and len(non_na) < 2:
+                effective_method = "skip"
+            elif effective_method in {"isolation_forest", "lof"} and len(non_na) < 10:
+                effective_method = "skip"
+
+            if effective_method == "skip" and not bool(domain_mask.any()):
+                continue
+
+            if effective_method == "iqr":
                 Q1 = float(non_na.quantile(0.25))
                 Q3 = float(non_na.quantile(0.75))
                 IQR = Q3 - Q1
-                lower_bound = Q1 - threshold * IQR
-                upper_bound = Q3 + threshold * IQR
-                outlier_mask = (df[col] < lower_bound) | (df[col] > upper_bound)
-                outlier_mask = outlier_mask.fillna(False)
+                if IQR != 0:
+                    lower_bound = Q1 - threshold * IQR
+                    upper_bound = Q3 + threshold * IQR
+                    outlier_mask = (df[col] < lower_bound) | (df[col] > upper_bound)
+                    outlier_mask = outlier_mask.fillna(False)
 
-            elif method == "zscore":
-                if len(non_na) < 2:
-                    continue
+            elif effective_method == "log_iqr":
+                transformed = np.log1p(non_na)
+                Q1 = float(transformed.quantile(0.25))
+                Q3 = float(transformed.quantile(0.75))
+                IQR = Q3 - Q1
+                if IQR != 0:
+                    log_lower = Q1 - threshold * IQR
+                    log_upper = Q3 + threshold * IQR
+                    lower_bound = float(np.expm1(log_lower))
+                    upper_bound = float(np.expm1(log_upper))
+                    outlier_mask = (df[col] < lower_bound) | (df[col] > upper_bound)
+                    outlier_mask = outlier_mask.fillna(False)
+
+            elif effective_method == "mad":
+                median = float(non_na.median())
+                mad = float((non_na - median).abs().median())
+                if mad != 0:
+                    modified_z = 0.6745 * (non_na - median).abs() / mad
+                    cutoff = threshold if threshold and threshold > 3.0 else 3.5
+                    outlier_mask.loc[non_na.index] = modified_z > cutoff
+
+            elif effective_method == "zscore":
                 z_array = np.abs(stats.zscore(non_na))
                 z_scores = pd.Series(z_array, index=non_na.index)
                 outlier_mask.loc[non_na.index] = z_scores > threshold
 
+            elif effective_method == "isolation_forest":
+                model = IsolationForest(contamination="auto", random_state=42)
+                labels = model.fit_predict(non_na.to_numpy().reshape(-1, 1))
+                outlier_mask.loc[non_na.index] = labels == -1
+
+            elif effective_method == "lof":
+                n_neighbors = min(20, max(2, len(non_na) - 1))
+                model = LocalOutlierFactor(n_neighbors=n_neighbors, contamination="auto")
+                labels = model.fit_predict(non_na.to_numpy().reshape(-1, 1))
+                outlier_mask.loc[non_na.index] = labels == -1
+
+            outlier_mask = (outlier_mask | domain_mask).fillna(False)
+
             num_outliers = int(outlier_mask.sum())
             if num_outliers <= 0:
                 continue
+
+            if bool((outlier_mask & domain_mask).any()):
+                severity = "critical"
 
             outliers_detected[col] = num_outliers
             total_outliers += num_outliers
@@ -587,7 +720,11 @@ class CleaningService:
                     "rows": [int(r) for r in rows],
                     "values": values,
                     "method": method,
+                    "effective_method": effective_method,
                     "threshold": threshold,
+                    "severity": severity,
+                    "column_role": role,
+                    "suggested_action": "review" if severity == "warning" else action,
                 }
                 if lower_bound is not None and upper_bound is not None:
                     meta["lower_bound"] = float(lower_bound)
@@ -597,10 +734,10 @@ class CleaningService:
             if action == "remove":
                 df = df.loc[~outlier_mask]
             elif action == "cap":
-                if method == "iqr" and lower_bound is not None and upper_bound is not None:
+                if effective_method in {"iqr", "log_iqr"} and lower_bound is not None and upper_bound is not None:
                     df.loc[outlier_mask & (df[col] < lower_bound), col] = lower_bound
                     df.loc[outlier_mask & (df[col] > upper_bound), col] = upper_bound
-                elif method == "zscore":
+                elif effective_method == "zscore":
                     mean_val = float(non_na.mean())
                     std_val = float(non_na.std())
                     lb = mean_val - threshold * std_val

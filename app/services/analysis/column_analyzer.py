@@ -309,7 +309,7 @@ class ColumnAnalyzer:
         """
         
         logger.info("Detecting relationships with CustomPPS...")
-
+        
         # Exclude identifier-like columns AND noise/helper columns from PPS analysis
         id_cols = self.column_types.get("identifiers", [])
         noise_cols = self._get_noise_columns()

@@ -10,6 +10,11 @@ class MissingValueStrategy(str, Enum):
     INTERPOLATE = "interpolate"
 
 
+class MissingIdentifierAction(str, Enum):
+    DROP = "drop"
+    FILL_UNKNOWN = "fill_unknown"
+
+
 class FillStrategy(str, Enum):
     AUTO = "auto"
     MEAN = "mean"
@@ -19,9 +24,13 @@ class FillStrategy(str, Enum):
 
 
 class OutlierMethod(str, Enum):
+    AUTO = "auto"
     IQR = "iqr"
+    MAD = "mad"
+    LOG_IQR = "log_iqr"
     ZSCORE = "zscore"
     ISOLATION_FOREST = "isolation_forest"
+    LOF = "lof"
 
 
 class OutlierAction(str, Enum):
@@ -57,7 +66,7 @@ class CleaningProfileCreate(BaseModel):
 
     # Outliers
     detect_outliers: bool = True
-    outlier_method: OutlierMethod = OutlierMethod.IQR
+    outlier_method: OutlierMethod = OutlierMethod.AUTO
     outlier_threshold: float = 1.5
     outlier_action: OutlierAction = OutlierAction.FLAG
     outlier_max_rows: int = 500_000
@@ -95,6 +104,7 @@ class CleanDatasetRequest(BaseModel):
     dataset_id: int
     profile_id: Optional[int] = None  # Use default if not provided
     save_as_new: bool = True  # Default to safer behavior; original file is preserved
+    missing_identifier_action: Optional[MissingIdentifierAction] = None
 
 
 class CleaningReportResponse(BaseModel):
