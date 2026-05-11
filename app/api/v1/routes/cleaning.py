@@ -177,7 +177,7 @@ async def clean_dataset(
                 detect_outliers=True,
                 outlier_method="auto",
                 outlier_threshold=1.5,
-                outlier_action="flag",
+                outlier_action="cap",
                 outlier_max_rows=500_000,
                 add_flag_columns=False,
                 save_outliers_metadata=True,

@@ -805,6 +805,8 @@ class CleaningService:
                     modified_z = 0.6745 * (non_na - median).abs() / mad
                     cutoff = threshold if threshold and threshold > 3.0 else 3.5
                     outlier_mask.loc[non_na.index] = modified_z > cutoff
+                    lower_bound = float(median - (cutoff * mad / 0.6745))
+                    upper_bound = float(median + (cutoff * mad / 0.6745))
 
             elif effective_method == "zscore":
                 z_array = np.abs(stats.zscore(non_na))
@@ -858,7 +860,7 @@ class CleaningService:
             if action == "remove":
                 df = df.loc[~outlier_mask]
             elif action == "cap":
-                if effective_method in {"iqr", "log_iqr"} and lower_bound is not None and upper_bound is not None:
+                if effective_method in {"iqr", "log_iqr", "mad"} and lower_bound is not None and upper_bound is not None:
                     df.loc[outlier_mask & (df[col] < lower_bound), col] = lower_bound
                     df.loc[outlier_mask & (df[col] > upper_bound), col] = upper_bound
                 elif effective_method == "zscore":
