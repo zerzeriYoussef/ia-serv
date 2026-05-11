@@ -115,11 +115,12 @@ async def delete_cleaning_profile(
 @router.post("/datasets/{dataset_id}/clean", response_model=CleaningReportResponse)
 async def clean_dataset(
     dataset_id: int,
-    profile_id: Optional[int] = None,
-    save_as_new: bool = False,
+    request: CleanDatasetRequest,
     db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(require_auth)
 ):
+    profile_id = request.profile_id
+    save_as_new = request.save_as_new
     """
     Clean a dataset using a cleaning profile
 

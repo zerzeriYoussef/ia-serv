@@ -137,7 +137,10 @@ class ScanService:
                 ub = meta.get("upper_bound")
                 effective_method = meta.get("effective_method", meta.get("method"))
                 severity = meta.get("severity", "warning")
+                reason = "regle de domaine invalide"
                 bound_str = f"[{lb:.2f} – {ub:.2f}]" if lb is not None and ub is not None else ""
+                if bound_str:
+                    reason = f"hors borne normale {bound_str}"
                 for row_idx, val in zip(meta.get("rows", []), meta.get("values", [])):
                     issues.append({
                         "row_index"    : int(row_idx),
@@ -146,7 +149,7 @@ class ScanService:
                         "issue_type"   : "outlier",
                         "description"  : (
                             f"Valeur aberrante {val} dans « {col} » "
-                            f"— hors borne normale {bound_str}"
+                            f"— {reason}"
                         ),
                         "current_value": val,
                         "severity"     : severity,
@@ -154,6 +157,9 @@ class ScanService:
                             "method": meta.get("method"),
                             "effective_method": effective_method,
                             "column_role": meta.get("column_role"),
+                            "role_confidence": meta.get("role_confidence"),
+                            "role_reason": meta.get("role_reason"),
+                            "value_profile": meta.get("value_profile"),
                             "suggested_action": meta.get("suggested_action", "review"),
                             "lower_bound": lb,
                             "upper_bound": ub,

@@ -1,6 +1,7 @@
 import re
 import pandas as pd
 import numpy as np
+import unicodedata
 from typing import Dict, List, Tuple, Optional
 from sklearn.preprocessing import MinMaxScaler, StandardScaler, RobustScaler
 from sklearn.ensemble import IsolationForest
@@ -40,20 +41,44 @@ class CleaningService:
         "zip", "postal",
     }
 
-    _QUANTITY_PATTERNS = ("qty", "quantity", "count", "units", "volume")
-    _PRICE_PATTERNS = ("price", "cost", "amount", "sales", "revenue", "total")
-    _PERCENT_PATTERNS = ("percent", "percentage", "pct", "rate", "ratio")
+    _QUANTITY_PATTERNS = (
+        "qty", "quantity", "count", "units", "volume",
+        "qte", "quantite", "nombre", "nb", "unite", "unites",
+    )
+    _PRICE_PATTERNS = (
+        "price", "cost", "amount", "sales", "revenue", "total",
+        "prix", "cout", "montant", "vente", "ventes", "revenu",
+        "revenus", "tarif", "chiffre_affaires", "ca",
+    )
+    _PERCENT_PATTERNS = (
+        "percent", "percentage", "pct", "rate", "ratio",
+        "pourcentage", "taux",
+    )
+
+    @staticmethod
+    def _normalize_column_name(col: str) -> str:
+        """Normalize names so French accents do not break semantic matching."""
+        text = unicodedata.normalize("NFKD", str(col))
+        text = "".join(ch for ch in text if not unicodedata.combining(ch))
+        return re.sub(r"[^a-z0-9]+", "_", text.lower()).strip("_")
 
     @staticmethod
     def _is_outlier_identifier_column(df: pd.DataFrame, col: str) -> bool:
         """Return True for numeric identifiers that should not be outlier-scanned."""
-        col_lower = str(col).lower()
+        col_lower = CleaningService._normalize_column_name(col)
         metric_patterns = (
             CleaningService._QUANTITY_PATTERNS
             + CleaningService._PRICE_PATTERNS
             + CleaningService._PERCENT_PATTERNS
         )
         if any(pattern in col_lower for pattern in metric_patterns):
+            return False
+
+        value_profile = CleaningService._numeric_value_profile(df[col])
+        if (
+            value_profile["count_like_score"] >= 0.75
+            and value_profile["unique_ratio"] <= 0.70
+        ):
             return False
 
         try:
@@ -69,20 +94,115 @@ class CleaningService:
         )
 
     @staticmethod
-    def _infer_numeric_role(col: str, series: pd.Series) -> str:
-        """Infer a loose semantic role so auto mode can choose a safer detector."""
-        col_lower = str(col).lower()
-        if any(pattern in col_lower for pattern in CleaningService._PERCENT_PATTERNS):
-            return "percentage"
-        if any(pattern in col_lower for pattern in CleaningService._QUANTITY_PATTERNS):
-            return "quantity"
-        if any(pattern in col_lower for pattern in CleaningService._PRICE_PATTERNS):
-            return "money"
+    def _numeric_value_profile(series: pd.Series) -> Dict[str, float]:
+        """Summarize numeric shape for value-based role inference."""
+        numeric = pd.to_numeric(series, errors="coerce").dropna()
+        n = len(numeric)
+        if n == 0:
+            return {
+                "n": 0.0,
+                "integer_rate": 0.0,
+                "non_negative_rate": 0.0,
+                "positive_rate": 0.0,
+                "unique_ratio": 0.0,
+                "skew": 0.0,
+                "count_like_score": 0.0,
+                "percentage_0_100_rate": 0.0,
+            }
 
-        non_na = series.dropna()
-        if len(non_na) and (non_na >= 0).all() and float(non_na.skew()) > 1.0:
-            return "positive_skewed"
-        return "numeric"
+        integer_rate = float(np.isclose(numeric, np.round(numeric)).mean())
+        non_negative_rate = float((numeric >= 0).mean())
+        positive_rate = float((numeric > 0).mean())
+        unique_ratio = float(numeric.nunique(dropna=True) / max(n, 1))
+        skew = float(numeric.skew()) if n >= 3 else 0.0
+        percentage_0_100_rate = float(((numeric >= 0) & (numeric <= 100)).mean())
+
+        repeated_score = max(0.0, min(1.0, 1.0 - unique_ratio))
+        count_like_score = (
+            0.45 * integer_rate
+            + 0.35 * non_negative_rate
+            + 0.20 * repeated_score
+        )
+
+        return {
+            "n": float(n),
+            "integer_rate": integer_rate,
+            "non_negative_rate": non_negative_rate,
+            "positive_rate": positive_rate,
+            "unique_ratio": unique_ratio,
+            "skew": skew,
+            "count_like_score": float(count_like_score),
+            "percentage_0_100_rate": percentage_0_100_rate,
+        }
+
+    @staticmethod
+    def _infer_numeric_role_info(col: str, series: pd.Series) -> Dict[str, object]:
+        """Infer a semantic numeric role using name hints and value shape."""
+        col_lower = CleaningService._normalize_column_name(col)
+        profile = CleaningService._numeric_value_profile(series)
+
+        if any(pattern in col_lower for pattern in CleaningService._PERCENT_PATTERNS):
+            return {
+                "role": "percentage",
+                "confidence": 0.95,
+                "reason": "column name looks like a percentage/rate",
+                "profile": profile,
+            }
+        if any(pattern in col_lower for pattern in CleaningService._QUANTITY_PATTERNS):
+            return {
+                "role": "quantity",
+                "confidence": 0.95,
+                "reason": "column name looks like a quantity/count",
+                "profile": profile,
+            }
+        if any(pattern in col_lower for pattern in CleaningService._PRICE_PATTERNS):
+            return {
+                "role": "money",
+                "confidence": 0.95,
+                "reason": "column name looks like a price/money metric",
+                "profile": profile,
+            }
+
+        if profile["count_like_score"] >= 0.75 and profile["unique_ratio"] <= 0.70:
+            return {
+                "role": "count_like",
+                "confidence": round(float(profile["count_like_score"]), 2),
+                "reason": "values are mostly integer, non-negative, and repeated",
+                "profile": profile,
+            }
+
+        if (
+            profile["percentage_0_100_rate"] >= 0.98
+            and profile["unique_ratio"] > 0.10
+            and profile["n"] >= 10
+        ):
+            return {
+                "role": "percentage_like",
+                "confidence": 0.70,
+                "reason": "values mostly fall in the 0-100 range",
+                "profile": profile,
+            }
+
+        non_na = pd.to_numeric(series, errors="coerce").dropna()
+        if len(non_na) and (non_na >= 0).all() and profile["skew"] > 1.0:
+            return {
+                "role": "positive_skewed",
+                "confidence": 0.65,
+                "reason": "positive numeric column with right-skewed distribution",
+                "profile": profile,
+            }
+
+        return {
+            "role": "numeric",
+            "confidence": 0.50,
+            "reason": "generic numeric column",
+            "profile": profile,
+        }
+
+    @staticmethod
+    def _infer_numeric_role(col: str, series: pd.Series) -> str:
+        """Compatibility helper returning only the role name."""
+        return str(CleaningService._infer_numeric_role_info(col, series)["role"])
 
     @staticmethod
     def _auto_outlier_method(col: str, series: pd.Series, requested: str) -> str:
@@ -95,7 +215,7 @@ class CleaningService:
             return "skip"
 
         role = CleaningService._infer_numeric_role(col, series)
-        if role in {"quantity", "money", "positive_skewed"}:
+        if role in {"quantity", "count_like", "money", "positive_skewed"}:
             return "log_iqr"
         return "mad"
 
@@ -634,11 +754,12 @@ class CleaningService:
             lower_bound: Optional[float] = None
             upper_bound: Optional[float] = None
             effective_method = CleaningService._auto_outlier_method(col, df[col], method)
-            role = CleaningService._infer_numeric_role(col, df[col])
+            role_info = CleaningService._infer_numeric_role_info(col, df[col])
+            role = str(role_info["role"])
             domain_mask = pd.Series(False, index=df.index)
-            if role in {"quantity", "money"}:
+            if role in {"quantity", "count_like", "money"}:
                 domain_mask = (df[col] < 0).fillna(False)
-            elif role == "percentage":
+            elif role in {"percentage", "percentage_like"}:
                 domain_mask = ((df[col] < 0) | (df[col] > 100)).fillna(False)
             severity = "warning"
 
@@ -724,6 +845,9 @@ class CleaningService:
                     "threshold": threshold,
                     "severity": severity,
                     "column_role": role,
+                    "role_confidence": role_info.get("confidence"),
+                    "role_reason": role_info.get("reason"),
+                    "value_profile": role_info.get("profile"),
                     "suggested_action": "review" if severity == "warning" else action,
                 }
                 if lower_bound is not None and upper_bound is not None:
