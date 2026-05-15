@@ -130,10 +130,29 @@ class AnalysisAgent:
 
         # ── DataFrame ─────────────────────────────────────────────────
         if isinstance(raw, pd.DataFrame):
+            # Square correlation matrix → heatmap-friendly payload
+            if (
+                raw.shape[0] == raw.shape[1]
+                and raw.shape[0] >= 2
+                and list(raw.index.astype(str)) == list(raw.columns.astype(str))
+            ):
+                cols = [str(c) for c in raw.columns]
+                matrix = [
+                    [
+                        float(raw.iloc[i, j]) if pd.notnull(raw.iloc[i, j]) else None
+                        for j in range(len(cols))
+                    ]
+                    for i in range(len(cols))
+                ]
+                return ToolResult(
+                    result_type="frame_preview",
+                    payload={"matrix": matrix, "columns": cols},
+                )
+
             # Include index if it is meaningful (not a default RangeIndex or flat index without name)
             if not isinstance(raw.index, pd.RangeIndex) or raw.index.name is not None:
                 raw = raw.reset_index()
-                
+
             trimmed = raw.head(MAX_FRAME_ROWS)
             payload: Any = {
                 str(col): [

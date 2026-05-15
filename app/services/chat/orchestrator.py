@@ -21,6 +21,8 @@ from __future__ import annotations
 
 import json
 import logging
+import math
+import re
 import time
 from typing import Any, AsyncGenerator, Dict, List, Optional, Tuple
 
@@ -118,7 +120,9 @@ Be concise, clear, and specific. Use plain language.
 Do NOT mention internal implementation details, column names as variables, or code.
 If citing retrieved facts, reference them naturally (not as [chunk_id] codes).
 If tool results are available, interpret them directly — do not say "based on the data".
-If a chart is generated, DO NOT apologize or state that you cannot display graphical charts. The frontend UI will render the chart automatically. Simply describe the insights from the data.
+If the prompt says a chart WAS generated, describe the insights briefly — the UI renders it automatically below your message.
+NEVER say you cannot generate, draw, or display charts/visuals — the application renders charts for the user.
+If the prompt says NO chart was generated, do NOT claim to show a chart; give the numeric answer from tool results instead.
 Just give the direct answer with numbers and insights.
 End with a brief caveat if relevant (e.g., correlation ≠ causation, sample size).
 """
@@ -127,14 +131,38 @@ End with a brief caveat if relevant (e.g., correlation ≠ causation, sample siz
 # Internal helpers
 # ---------------------------------------------------------------------------
 
+def _json_safe(value: Any) -> Any:
+    """Return a strict-JSON-safe copy of streamed payload data."""
+    if isinstance(value, dict):
+        return {str(k): _json_safe(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple, set)):
+        return [_json_safe(v) for v in value]
+    if isinstance(value, float):
+        return value if math.isfinite(value) else None
+    if isinstance(value, (str, int, bool)) or value is None:
+        return value
+    if hasattr(value, "item"):
+        try:
+            return _json_safe(value.item())
+        except Exception:
+            pass
+    if hasattr(value, "isoformat"):
+        try:
+            return value.isoformat()
+        except Exception:
+            pass
+    return str(value)
+
+
 def _sse(event_type: SseEventType, data: Any) -> str:
     """Format one SSE frame."""
-    if isinstance(data, dict):
-        payload = json.dumps(data)
-    elif hasattr(data, "model_dump_json"):
-        payload = data.model_dump_json()
+    if hasattr(data, "model_dump"):
+        payload_data = data.model_dump()
+    elif isinstance(data, dict):
+        payload_data = data
     else:
-        payload = json.dumps(str(data))
+        payload_data = data
+    payload = json.dumps(_json_safe(payload_data), allow_nan=False)
     return f"event: {event_type.value}\ndata: {payload}\n\n"
 
 
@@ -240,6 +268,52 @@ def _trim_tool_result_preview(result: ToolResult, max_chars: int = 500) -> str:
     return raw
 
 
+def _fallback_chart_narrative(chart_spec: Optional[ChartSpec]) -> str:
+    """Small deterministic explanation when the narrator model returns no usable text."""
+    if not chart_spec:
+        return "I prepared the result from the available data."
+
+    data = chart_spec.data or {}
+    title = chart_spec.title or "chart"
+    points: List[Tuple[str, float]] = []
+
+    axis_x = data.get("axis_x") or []
+    axis_y = data.get("axis_y") or []
+    if isinstance(axis_x, list) and isinstance(axis_y, list):
+        for label, raw_value in zip(axis_x, axis_y):
+            try:
+                value = float(raw_value)
+            except (TypeError, ValueError):
+                continue
+            if math.isfinite(value):
+                points.append((str(label), value))
+
+    if not points and isinstance(data.get("series"), list):
+        for series in data["series"]:
+            if not isinstance(series, dict):
+                continue
+            values = series.get("values") or []
+            if not isinstance(values, list) or not values:
+                continue
+            finite_values: List[float] = []
+            for raw_value in values:
+                try:
+                    value = float(raw_value)
+                except (TypeError, ValueError):
+                    continue
+                if math.isfinite(value):
+                    finite_values.append(value)
+            if finite_values:
+                points.append((str(series.get("name") or "series"), max(finite_values)))
+
+    if points:
+        top = sorted(points, key=lambda item: item[1], reverse=True)[:3]
+        top_text = ", ".join(f"{label}: {value:,.2f}" for label, value in top)
+        return f"Here is the {chart_spec.chart_type.value} chart for {title}. The strongest values are {top_text}."
+
+    return f"Here is the {chart_spec.chart_type.value} chart for {title}."
+
+
 def _make_analysis_context(
     analysis_row: Any,
     dataset: Any,
@@ -264,7 +338,7 @@ def _make_analysis_context(
 
 
 def _extract_sample_values(
-    df: "pd.DataFrame",
+    df: Any,
     max_cols: int = 150,
     max_vals: int = 15,
 ) -> Dict[str, List[Any]]:
@@ -322,6 +396,73 @@ def _parse_plan_robust(raw: Any) -> OrchestratorPlan:
         clarification_question=raw.get("clarification_question"),
         refuse_reason=raw.get("refuse_reason"),
     )
+
+
+_CHART_REQUEST_RE = re.compile(
+    r"\b("
+    r"chart|charts|graph|graphs|graphique|graphiques|graphe|graphes|"
+    r"visuali[sz]e?|visuali[sz]ation|plot|plots|draw|diagram|figure|"
+    r"affich(?:e|er).*graph|montre.*graph|show.*chart|generate.*graph"
+    r")\b",
+    re.IGNORECASE,
+)
+
+_COMPARE_CHART_RE = re.compile(
+    r"\b(difference|compare|comparison|between|vs\.?|versus|by month|monthly|trend|over time)\b",
+    re.IGNORECASE,
+)
+
+
+def _last_substantive_user_question(
+    user_message: str,
+    history_messages: List[ChatMessage],
+) -> str:
+    """For chart-only follow-ups, recover the prior data question from the thread."""
+    if not _CHART_REQUEST_RE.search(user_message):
+        return user_message
+    for msg in reversed(history_messages):
+        role_str = msg.role.value if hasattr(msg.role, "value") else str(msg.role)
+        if role_str != "user":
+            continue
+        text = (msg.content or "").strip()
+        if len(text) > 15 and not _CHART_REQUEST_RE.search(text):
+            return text
+    return user_message
+
+
+async def _replan_tools_for_chart(
+    analysis_ctx: Dict[str, Any],
+    retrieval_ctx: str,
+    transcript: str,
+    data_question: str,
+) -> List[ToolArgs]:
+    """Second planner pass when the user wants a chart but the first plan has no tool_calls."""
+    replan_prompt = f"""\
+DATASET_CONTEXT:
+{json.dumps(analysis_ctx, default=str, indent=2)}
+
+RETRIEVED_CONTEXT:
+{retrieval_ctx}
+
+RECENT_CONVERSATION:
+{transcript}
+
+DATA_QUESTION (build tool_calls to answer this with plottable aggregates):
+{data_question}
+
+Output JSON with needs_chart=true and at least one tool_call (code_expr + label).
+Use only column names from DATASET_CONTEXT.columns.
+Prefer groupby + agg that returns a Series or DataFrame suitable for a line/bar chart.
+"""
+    try:
+        raw = await generate_json_response(ORCHESTRATOR_SYSTEM, replan_prompt, timeout_s=35.0)
+        replan = _parse_plan_robust(raw)
+        if replan.tool_calls:
+            logger.info("chat_turn: chart replan produced %d tool_calls", len(replan.tool_calls))
+            return replan.tool_calls
+    except Exception as exc:
+        logger.warning("chat_turn: chart replan failed: %s", exc)
+    return []
 
 
 # ---------------------------------------------------------------------------
@@ -444,7 +585,6 @@ Produce a JSON plan with keys: intent, tool_calls, needs_chart, clarification_qu
         # Fall back to retrieve_only so the user still gets an answer
         plan = OrchestratorPlan(intent=Intent.retrieve_only, tool_calls=[], needs_chart=False)
 
-    import re
     # ── Post-plan sanity guard for speculative questions
     _RELATION_PATTERNS = re.compile(
         r"\b(correlat|affect|impact|improve|relate|wonder if|cut.*hour|cause|between)\b",
@@ -467,6 +607,52 @@ Produce a JSON plan with keys: intent, tool_calls, needs_chart, clarification_qu
 
     if plan.tool_calls and plan.intent in (Intent.analyze, Intent.visualize):
         pass  # No repair needed — LLM generates direct code_expr now
+
+    # ── Post-plan sanity guard for missing tool calls on visualization
+    if plan.needs_chart and not plan.tool_calls:
+        logger.info("chat_turn: needs_chart is true but no tool_calls. Looking in history...")
+        for msg in reversed(history_messages):
+            role_str = msg.role.value if hasattr(msg.role, "value") else str(msg.role)
+            if role_str == "assistant" and getattr(msg, "tool_calls", None):
+                try:
+                    plan.tool_calls = [ToolArgs(**tc) for tc in msg.tool_calls]
+                    logger.info("chat_turn: recovered tool_calls from history: %s", plan.tool_calls)
+                    break
+                except Exception as e:
+                    logger.warning("chat_turn: failed to recover tool_calls from history: %s", e)
+
+    # ── Auto-chart for comparison / trend questions with tools
+    if plan.tool_calls and _COMPARE_CHART_RE.search(user_message):
+        plan.needs_chart = True
+
+    # ── Force chart generation when user explicitly asks for a graph/chart
+    user_wants_chart = bool(_CHART_REQUEST_RE.search(user_message))
+    if user_wants_chart:
+        plan.needs_chart = True
+        if not plan.tool_calls:
+            for msg in reversed(history_messages):
+                role_str = msg.role.value if hasattr(msg.role, "value") else str(msg.role)
+                if role_str == "assistant" and getattr(msg, "tool_calls", None):
+                    try:
+                        plan.tool_calls = [ToolArgs(**tc) for tc in msg.tool_calls]
+                        logger.info(
+                            "chat_turn: chart request recovered tool_calls from history: %s",
+                            plan.tool_calls,
+                        )
+                        break
+                    except Exception as e:
+                        logger.warning("chat_turn: chart recovery failed: %s", e)
+        if not plan.tool_calls:
+            data_q = _last_substantive_user_question(user_message, history_messages)
+            plan.tool_calls = await _replan_tools_for_chart(
+                analysis_ctx,
+                retrieval_ctx,
+                transcript_for_planner,
+                data_q,
+            )
+        if plan.tool_calls and plan.intent == Intent.retrieve_only:
+            plan.intent = Intent.visualize
+        logger.info("chat_turn: chart request detected → needs_chart=True tools=%d", len(plan.tool_calls))
 
     logger.info("chat_turn: intent=%s tools=%d chart=%s", plan.intent, len(plan.tool_calls), plan.needs_chart)
 
@@ -571,10 +757,22 @@ Produce a JSON plan with keys: intent, tool_calls, needs_chart, clarification_qu
     else:
         tool_results_text = "No tool calls were executed."
 
-    chart_note = (
-        f"\nA {chart_spec.chart_type.value} chart titled '{chart_spec.title}' was generated."
-        if chart_spec else ""
-    )
+    if chart_spec:
+        chart_note = (
+            f"\nA {chart_spec.chart_type.value} chart titled '{chart_spec.title}' was generated. "
+            "The UI renders it below your text — summarize the key insight in 1-2 sentences. "
+            "Do NOT say you cannot display charts."
+        )
+    elif user_wants_chart:
+        chart_note = (
+            "\nThe user asked for a chart but it could not be built (query or data shape). "
+            "Give the numbers from TOOL_RESULTS. NEVER say you cannot generate or display charts."
+        )
+    else:
+        chart_note = (
+            "\nNo chart was generated. Do NOT claim to show a chart. "
+            "NEVER say you cannot generate or display charts."
+        )
 
     history_contents = _build_history_contents(history_messages, rolling_summary)
 
@@ -643,13 +841,20 @@ Answer directly and specifically. If the tool results contain the answer, give t
 
     latency_ms = int((time.monotonic() - t0) * 1000)
     full_answer = "".join(full_answer_parts)
+    if chart_spec and len(full_answer.strip()) < 25:
+        fallback_text = _fallback_chart_narrative(chart_spec)
+        joiner = "\n\n" if full_answer.strip() else ""
+        full_answer = f"{full_answer}{joiner}{fallback_text}"
+        yield _sse(SseEventType.token, TokenEvent(delta=f"{joiner}{fallback_text}").model_dump())
 
     # ── 9. Populate result_out for the route layer ─────────────────────
+    chart_payload = _json_safe(chart_spec.model_dump()) if chart_spec else None
+
     result_out.update({
         "full_answer": full_answer,
         "intent": plan.intent.value,
         "chunk_ids": chunk_ids,
-        "chart_spec": chart_spec.model_dump() if chart_spec else None,
+        "chart_spec": chart_payload,
         "latency_ms": latency_ms,
         "tool_calls": [tc.model_dump() for tc in plan.tool_calls],
     })
@@ -665,5 +870,6 @@ Answer directly and specifically. If the tool results contain the answer, give t
             conversation_id=conversation_id,
             message_id=0,  # caller updates with persisted message id
             latency_ms=latency_ms,
+            chart_spec=chart_payload,
         ).model_dump(),
     )

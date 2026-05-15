@@ -12,6 +12,7 @@ POST /dashboards/{id}/execute                 → execute pandas KPI/chart logic
 from datetime import datetime, timezone
 from typing import List
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -66,6 +67,34 @@ def _handle_rag_value_error(e: ValueError, dataset_id: int) -> None:
     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
+def _raise_rag_upstream_error(e: Exception) -> None:
+    """Expose Gemini/API failures with the correct HTTP class for the UI."""
+    if isinstance(e, httpx.HTTPStatusError):
+        upstream_status = e.response.status_code
+        if upstream_status == status.HTTP_429_TOO_MANY_REQUESTS:
+            detail = "Gemini quota exceeded or rate limited. Please retry later or use another API key/plan."
+            try:
+                body = e.response.json()
+                detail = body.get("error", {}).get("message") or detail
+            except Exception:
+                pass
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail=detail,
+            ) from e
+
+        if upstream_status == status.HTTP_503_SERVICE_UNAVAILABLE:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Gemini is temporarily unavailable or overloaded. Please retry shortly.",
+            ) from e
+
+    raise HTTPException(
+        status_code=status.HTTP_502_BAD_GATEWAY,
+        detail=f"RAG/Gemini failed: {e!s}",
+    ) from e
+
+
 # ---------------------------------------------------------------------------
 # POST /datasets/{dataset_id}/rag-insights
 # Supports ?save=true to persist the result as a Dashboard row
@@ -108,10 +137,7 @@ async def dataset_rag_insights(
         except ValueError as e:
             _handle_rag_value_error(e, dataset_id)
         except Exception as e:
-            raise HTTPException(
-                status_code=status.HTTP_502_BAD_GATEWAY,
-                detail=f"RAG/Gemini failed: {e!s}",
-            ) from e
+            _raise_rag_upstream_error(e)
 
         try:
             return DashboardSchema(
@@ -145,10 +171,7 @@ async def dataset_rag_insights(
     except ValueError as e:
         _handle_rag_value_error(e, dataset_id)
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"RAG/Gemini failed: {e!s}",
-        ) from e
+        _raise_rag_upstream_error(e)
 
     try:
         kpis = [

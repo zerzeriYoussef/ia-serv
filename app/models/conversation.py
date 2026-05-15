@@ -68,6 +68,7 @@ class ChatMessage(Base):
     intent = Column(String, nullable=True)          # analyse wla calcul
     tool_calls = Column(JSON, nullable=True)        # list[ToolArgs] as dicts
     chunk_ids = Column(JSON, nullable=True)         # list[str] retrieved chunk IDs
+    chart_spec = Column(JSON, nullable=True)        # VizAgent ChartSpec dict for UI replay
     latency_ms = Column(Integer, nullable=True)     # wall-clock ms for the full turn
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())

@@ -34,8 +34,14 @@ class Settings(BaseSettings):
     # Internal Communication
     INTERNAL_SECRET: str = "changeme_in_production"
     
-    # CORS
-    CORS_ORIGINS: List[str] = ["http://localhost:3000"]
+    # CORS (override via .env JSON list, e.g. CORS_ORIGINS=["http://localhost:4200"])
+    CORS_ORIGINS: List[str] = [
+        "http://localhost:4200",
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "http://localhost",
+        "http://127.0.0.1:4200",
+    ]
     
     # Logging
     LOG_LEVEL: str = "INFO"

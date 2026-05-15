@@ -171,6 +171,10 @@ Return a SINGLE JSON object with EXACTLY these two top-level keys and nothing el
 Rules:
 - 4–8 items in executive_summary_kpis (diverse: total, average, trend, top dimension slice when applicable).
 - 6–10 items in dashboard_charts, sorted by rank; strength_score between 0 and 1 (use relationship strength from context when available).
+- Override the KPI count above: return 8-12 executive_summary_kpis when enough valid columns exist.
+- Override the chart count above: return 8-12 dashboard_charts when enough valid columns exist.
+- KPI logic_hint may use: df['col'].sum(), mean(), median(), min(), max(), count(), nunique(), std(), var(), value_counts(), len(df), df.shape[0], or df.groupby('dimension')['metric'].sum().idxmax().
+- Chart pandas_grouping should prefer supported safe forms: df.groupby('dimension')['metric'].sum(), df.groupby('dimension')['metric'].mean(), df['category'].value_counts().head(10), df[['metric_a', 'metric_b']].sum(), pd.crosstab(df['category_a'], df['category_b']), df.plot.scatter(x='metric_a', y='metric_b').
 - Titles and descriptions must sound executive-ready, not like debug logs.
 """
 

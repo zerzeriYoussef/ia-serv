@@ -248,6 +248,7 @@ async def ask_message(
         intent=result_out.get("intent"),
         tool_calls=result_out.get("tool_calls"),
         chunk_ids=result_out.get("chunk_ids"),
+        chart_spec=result_out.get("chart_spec"),
         latency_ms=result_out.get("latency_ms"),
     )
     await db.commit()
@@ -346,6 +347,7 @@ async def stream_ask(
                 intent=result_out.get("intent"),
                 tool_calls=result_out.get("tool_calls"),
                 chunk_ids=result_out.get("chunk_ids"),
+                chart_spec=result_out.get("chart_spec"),
                 latency_ms=result_out.get("latency_ms"),
             )
             await db.commit()

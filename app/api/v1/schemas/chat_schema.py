@@ -164,6 +164,7 @@ class DoneEvent(BaseModel):
     conversation_id: int
     message_id: int
     latency_ms: int
+    chart_spec: Optional[Dict[str, Any]] = None
 
 
 class ErrorEvent(BaseModel):
@@ -206,6 +207,7 @@ class MessageSchema(BaseModel):
     content: str
     intent: Optional[str] = None
     chunk_ids: Optional[List[str]] = None
+    chart_spec: Optional[Dict[str, Any]] = None
     latency_ms: Optional[int] = None
     created_at: datetime
 

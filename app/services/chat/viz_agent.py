@@ -119,26 +119,64 @@ class VizAgent:
                     "matrix": payload["matrix"],
                 },
             )
-            
-        # General DataFrame fallback
+
         cols = list(payload.keys())
-        if len(cols) >= 2:
-            x_col = cols[0]
-            # Use the last column as the primary y_col, or let the frontend render multiple lines
-            y_col = cols[-1]
+        if len(cols) < 2:
+            return None
 
-            chart_type = ChartType.bar
-            x_lower = str(x_col).lower()
-            if any(h in x_lower for h in self.TEMPORAL_HINTS) or "trend" in intent_hint.lower():
-                chart_type = ChartType.line
+        x_col = cols[0]
+        axis_x = [str(v) for v in payload[x_col]]
 
+        numeric_cols: list[str] = []
+        for c in cols[1:]:
+            vals = payload.get(c) or []
+            if not vals:
+                continue
+            sample = vals[: min(5, len(vals))]
+            if all(v is None or isinstance(v, (int, float)) for v in sample):
+                numeric_cols.append(c)
+
+        if not axis_x or not numeric_cols:
+            return None
+
+        chart_type = ChartType.bar
+        x_lower = str(x_col).lower()
+        if any(h in x_lower for h in self.TEMPORAL_HINTS) or "trend" in intent_hint.lower():
+            chart_type = ChartType.line
+
+        if len(numeric_cols) == 1:
+            y_col = numeric_cols[0]
+            axis_y = [
+                float(v) if v is not None and isinstance(v, (int, float)) else 0.0
+                for v in payload[y_col]
+            ]
             return ChartSpec(
                 chart_type=chart_type,
                 x_col=str(x_col),
                 y_col=str(y_col),
                 title=title or f"{y_col} by {x_col}",
                 caption="Tabular data visualization.",
-                data=payload,
+                data={"axis_x": axis_x, "axis_y": axis_y},
             )
 
-        return None
+        # Multiple numeric columns → multi-series (e.g. laptop vs smartphone by month)
+        series = []
+        for c in numeric_cols:
+            series.append({
+                "name": str(c),
+                "values": [
+                    float(v) if v is not None and isinstance(v, (int, float)) else 0.0
+                    for v in payload[c]
+                ],
+            })
+        y_label = " vs ".join(numeric_cols[:3])
+        if len(numeric_cols) > 3:
+            y_label += "…"
+        return ChartSpec(
+            chart_type=chart_type,
+            x_col=str(x_col),
+            y_col=y_label,
+            title=title or f"Comparison by {x_col}",
+            caption="Multi-series comparison.",
+            data={"axis_x": axis_x, "series": series},
+        )

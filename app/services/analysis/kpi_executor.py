@@ -94,12 +94,12 @@ class KPIExecutor:
             function_name = self._parse_function(pandas_function, logic_hint)
 
             # --- Categorical / text: mode-style (no numeric coercion) ---
-            if function_name in ("mode", "top", "most_common") or (
+            if function_name in ("mode", "top", "most_common", "value_counts") or (
                 function_name in self.SAFE_AGGREGATIONS
                 and not pd.api.types.is_numeric_dtype(series)
                 and function_name in ("count", "nunique")
             ):
-                if function_name in ("mode", "top", "most_common"):
+                if function_name in ("mode", "top", "most_common", "value_counts"):
                     vc = series.astype(str).value_counts()
                     if vc.empty:
                         return self._kpi_error(kpi_name, target_column, "No values to count")
@@ -269,6 +269,12 @@ class KPIExecutor:
             if "scatter" in lowered:
                 return self._execute_chart_scatter(title, pandas_grouping, x_col, y_col)
 
+            if "value_counts" in lowered:
+                return self._execute_chart_value_counts(title, pandas_grouping, x_col)
+
+            if re.search(r"df\s*\[\s*\[", pandas_grouping):
+                return self._execute_chart_multi_column_summary(title, pandas_grouping, y_col)
+
             normalized = self._strip_trailing_chain(pandas_grouping)
             group_col, agg_col, agg_func = self._parse_grouping(normalized)
 
@@ -419,6 +425,81 @@ class KPIExecutor:
             "execution_success": True,
         }
 
+    def _execute_chart_value_counts(
+        self,
+        title: str,
+        pandas_grouping: str,
+        x_fallback: Optional[str],
+    ) -> Dict[str, Any]:
+        """Parse df['category'].value_counts() and return a bar-ready series."""
+        cols = re.findall(r"""df\s*\[\s*['\"]([^'\"]+)['\"]\s*\]""", pandas_grouping)
+        col = (cols[0] if cols else None) or x_fallback
+        if not col:
+            raise ValueError(
+                f"Could not parse value_counts column from: '{pandas_grouping}'. "
+                "Expected df['column'].value_counts()"
+            )
+        if col not in self.df.columns:
+            raise ValueError(f"Column '{col}' not found")
+
+        top_n = self._parse_head_limit(pandas_grouping) or 20
+        vc = self.df[col].dropna().astype(str).value_counts().head(top_n)
+        return {
+            "chart_title": title,
+            "x_axis": col,
+            "y_axis": "count",
+            "aggregation": "value_counts",
+            "point_count": len(vc),
+            "data": {
+                "axis_x": [str(k) for k in vc.index],
+                "axis_y": [int(v) for v in vc.values],
+            },
+            "execution_success": True,
+        }
+
+    def _execute_chart_multi_column_summary(
+        self,
+        title: str,
+        pandas_grouping: str,
+        y_fallback: Optional[str],
+    ) -> Dict[str, Any]:
+        """
+        Parse df[['metric_a', 'metric_b']] style output and chart one summary
+        value per numeric column. This handles LLM chart suggestions that compare
+        measures directly instead of grouping by a dimension.
+        """
+        cols = re.findall(r"""['\"]([^'\"]+)['\"]""", pandas_grouping)
+        if not cols and y_fallback:
+            cols = [y_fallback]
+        cols = [c for c in cols if c in self.df.columns]
+        if not cols:
+            raise ValueError(
+                f"Could not parse metric columns from: '{pandas_grouping}'. "
+                "Expected df[['metric_a', 'metric_b']]"
+            )
+
+        agg = self._parse_summary_aggregation(pandas_grouping)
+        values: List[float] = []
+        labels: List[str] = []
+        for col in cols:
+            numeric = pd.to_numeric(self.df[col], errors="coerce")
+            if numeric.notna().any():
+                labels.append(col)
+                values.append(float(getattr(numeric, agg)()))
+
+        if not labels:
+            raise ValueError(f"No numeric metric columns found in: {cols}")
+
+        return {
+            "chart_title": title,
+            "x_axis": "metric",
+            "y_axis": agg,
+            "aggregation": agg,
+            "point_count": len(labels),
+            "data": {"axis_x": labels, "axis_y": values},
+            "execution_success": True,
+        }
+
     # ------------------------------------------------------------------
     # Batch helpers
     # ------------------------------------------------------------------
@@ -492,6 +573,16 @@ class KPIExecutor:
         agg_func = func_match.group(1).lower() if func_match else None
 
         return group_col, agg_col, agg_func
+
+    @staticmethod
+    def _parse_head_limit(pandas_expr: str) -> Optional[int]:
+        match = re.search(r"\.head\s*\(\s*(\d+)\s*\)", pandas_expr)
+        return int(match.group(1)) if match else None
+
+    @staticmethod
+    def _parse_summary_aggregation(pandas_expr: str) -> str:
+        match = re.search(r"\]\]\s*\.(sum|mean|median|min|max|std|var)\s*\(", pandas_expr, re.I)
+        return match.group(1).lower() if match else "sum"
 
     @staticmethod
     def _format_value(value: float) -> str:

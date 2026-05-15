@@ -76,6 +76,7 @@ class ConversationRepository:
         intent: Optional[str] = None,
         tool_calls: Optional[list] = None,
         chunk_ids: Optional[list] = None,
+        chart_spec: Optional[dict] = None,
         latency_ms: Optional[int] = None,
     ) -> ChatMessage:
         msg = ChatMessage(
@@ -85,6 +86,7 @@ class ConversationRepository:
             intent=intent,
             tool_calls=tool_calls,
             chunk_ids=chunk_ids,
+            chart_spec=chart_spec,
             latency_ms=latency_ms,
         )
         db.add(msg)

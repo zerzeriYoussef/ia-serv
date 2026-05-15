@@ -757,7 +757,9 @@ class CleaningService:
             role_info = CleaningService._infer_numeric_role_info(col, df[col])
             role = str(role_info["role"])
             domain_mask = pd.Series(False, index=df.index)
-            if role in {"quantity", "count_like", "money"}:
+            # non_negative_role: values must be >= 0 (quantity, count, money, age-like)
+            non_negative_role = role in {"quantity", "count_like", "money"}
+            if non_negative_role:
                 domain_mask = (df[col] < 0).fillna(False)
             elif role in {"percentage", "percentage_like"}:
                 domain_mask = ((df[col] < 0) | (df[col] > 100)).fillna(False)
@@ -782,6 +784,8 @@ class CleaningService:
                 if IQR != 0:
                     lower_bound = Q1 - threshold * IQR
                     upper_bound = Q3 + threshold * IQR
+                    if non_negative_role and lower_bound < 0:
+                        lower_bound = 0.0
                     outlier_mask = (df[col] < lower_bound) | (df[col] > upper_bound)
                     outlier_mask = outlier_mask.fillna(False)
 
@@ -807,6 +811,10 @@ class CleaningService:
                     outlier_mask.loc[non_na.index] = modified_z > cutoff
                     lower_bound = float(median - (cutoff * mad / 0.6745))
                     upper_bound = float(median + (cutoff * mad / 0.6745))
+                    # Clamp lower_bound for non-negative roles (e.g. age, price)
+                    # so we never cap -10 to a value like -3.72
+                    if non_negative_role and lower_bound < 0:
+                        lower_bound = 0.0
 
             elif effective_method == "zscore":
                 z_array = np.abs(stats.zscore(non_na))
@@ -860,16 +868,37 @@ class CleaningService:
             if action == "remove":
                 df = df.loc[~outlier_mask]
             elif action == "cap":
+                # Handle statistical bounds
                 if effective_method in {"iqr", "log_iqr", "mad"} and lower_bound is not None and upper_bound is not None:
                     df.loc[outlier_mask & (df[col] < lower_bound), col] = lower_bound
                     df.loc[outlier_mask & (df[col] > upper_bound), col] = upper_bound
                 elif effective_method == "zscore":
                     mean_val = float(non_na.mean())
                     std_val = float(non_na.std())
-                    lb = mean_val - threshold * std_val
+                    lb = max(mean_val - threshold * std_val, 0.0) if non_negative_role else mean_val - threshold * std_val
                     ub = mean_val + threshold * std_val
                     df.loc[outlier_mask & (df[col] < lb), col] = lb
                     df.loc[outlier_mask & (df[col] > ub), col] = ub
+                elif effective_method in {"isolation_forest", "lof", "skip"}:
+                    # Cannot cap statistically without bounds; fallback to NaN so they can be imputed
+                    # Only do this for purely statistical outliers (not domain outliers, which are handled below)
+                    df.loc[outlier_mask & ~domain_mask, col] = np.nan
+
+                # --- Domain floor / ceiling (applied AFTER statistical cap) ---
+                # Empirical non-negative check: if ALL non-outlier values are >= 0,
+                # the column is logically non-negative (e.g. AGE, SCORE, PRICE).
+                # This catches columns whose unique_ratio is too high for count_like
+                # classification but are still clearly non-negative in practice.
+                non_outlier_vals = df.loc[~outlier_mask, col].dropna()
+                col_is_non_negative = (
+                    non_negative_role
+                    or (len(non_outlier_vals) > 0 and (non_outlier_vals >= 0).mean() >= 0.90)
+                )
+                if col_is_non_negative:
+                    df.loc[(df[col] < 0).fillna(False), col] = 0
+                elif role in {"percentage", "percentage_like"}:
+                    df.loc[(df[col] < 0).fillna(False), col] = 0
+                    df.loc[(df[col] > 100).fillna(False), col] = 100
             elif action == "flag" and add_flag_columns:
                 df[f"{col}_outlier"] = outlier_mask
 
