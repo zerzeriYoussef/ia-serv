@@ -40,7 +40,7 @@ def _require_gemini() -> None:
     if not settings.GEMINI_API_KEY:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="GEMINI_API_KEY is not configured.",
+            detail="GEMINI_API_KEY n'est pas configuré.",
         )
 
 
@@ -49,7 +49,7 @@ async def _get_dataset_or_404(db: AsyncSession, dataset_id: int):
     if not ds:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Dataset {dataset_id} not found.",
+            detail=f"Jeu de données {dataset_id} introuvable.",
         )
     return ds
 
@@ -78,6 +78,10 @@ async def stream_report(
         default=None,
         description="Optional ID of conversation history to use for context",
     ),
+    language: str = Query(
+        default="fr",
+        description="Report language code, e.g. fr or en",
+    ),
     db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(require_auth),
 ):
@@ -104,7 +108,7 @@ async def stream_report(
         except json.JSONDecodeError:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail="filters must be valid JSON.",
+                detail="Les filtres doivent être du JSON valide.",
             )
 
     async def event_stream():
@@ -115,6 +119,7 @@ async def stream_report(
                 filters=parsed_filters,
                 include_web_context=include_web_context,
                 conversation_id=conversation_id,
+                language=language,
             ):
                 yield frame
         except Exception as exc:
@@ -166,6 +171,7 @@ async def generate_report(
         filters=body.filters,
         include_web_context=body.include_web_context,
         conversation_id=body.conversation_id,
+        language=body.language,
     ):
         # Parse the SSE frame to extract the report_done payload
         if frame.startswith(f"event: {ReportSseEventType.report_done.value}"):
@@ -181,7 +187,7 @@ async def generate_report(
     if not final_report:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Report generation failed — no report_done event received.",
+            detail="Échec de la génération du rapport — aucun événement report_done reçu.",
         )
 
     return final_report

@@ -51,7 +51,7 @@ def _require_gemini() -> None:
     if not settings.GEMINI_API_KEY:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="GEMINI_API_KEY is not configured",
+            detail="GEMINI_API_KEY n'est pas configuré",
         )
 
 
@@ -62,7 +62,7 @@ async def _get_conversation_or_404(
     if not conv or conv.dataset_id != dataset_id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Conversation {conversation_id} not found for dataset {dataset_id}",
+            detail=f"Conversation {conversation_id} introuvable pour le jeu de données {dataset_id}",
         )
     return conv
 
@@ -72,7 +72,7 @@ async def _get_dataset_or_404(db: AsyncSession, dataset_id: int):
     if not ds:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Dataset {dataset_id} not found",
+            detail=f"Jeu de données {dataset_id} introuvable",
         )
     return ds
 
@@ -113,7 +113,7 @@ async def create_conversation(
         db,
         dataset_id=dataset_id,
         user_id=current_user.user_id,
-        title=body.title or "New conversation",
+        title=body.title or "Nouvelle conversation",
         analysis_version=av,
     )
     await db.commit()
@@ -396,7 +396,7 @@ async def rebuild_index(
     if not analysis_row:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"No analysis found for dataset {dataset_id}. Run /analyze first.",
+            detail=f"Aucune analyse trouvée pour le jeu de données {dataset_id}. Exécutez d'abord /analyze.",
         )
 
     async def _do_index():
@@ -411,5 +411,5 @@ async def rebuild_index(
     return {
         "status": "indexing_started",
         "dataset_id": dataset_id,
-        "message": "Chroma index rebuild started in background.",
+        "message": "Reconstruction de l'index Chroma lancée en arrière-plan.",
     }

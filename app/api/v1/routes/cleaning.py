@@ -88,7 +88,7 @@ async def get_cleaning_profile(
     if not profile:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Cleaning profile {profile_id} not found"
+            detail=f"Profil de nettoyage {profile_id} introuvable"
         )
     
     return profile
@@ -106,7 +106,7 @@ async def delete_cleaning_profile(
     if not deleted:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Cleaning profile {profile_id} not found"
+            detail=f"Profil de nettoyage {profile_id} introuvable"
         )
 
 
@@ -136,7 +136,7 @@ async def clean_dataset(
     if not dataset:
         raise HTTPException( 
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Dataset {dataset_id} not found"
+            detail=f"Jeu de données {dataset_id} introuvable"
         )
     
     # Check ownership
@@ -147,7 +147,7 @@ async def clean_dataset(
         )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You do not have access to this dataset"
+            detail="Vous n'avez pas accès à ce jeu de données"
         )
     
     # Get cleaning profile
@@ -156,15 +156,15 @@ async def clean_dataset(
         if not profile:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Cleaning profile {profile_id} not found"
+                detail=f"Profil de nettoyage {profile_id} introuvable"
             )
     else:
         profile = await CleaningProfileRepository.get_default(db)
         if not profile:
             profile = await CleaningProfileRepository.create(
                 db,
-                name="Default Cleaning Profile",
-                description="Auto-created default profile",
+                name="Profil de nettoyage par défaut",
+                description="Profil par défaut créé automatiquement",
                 is_default=True,
                 handle_missing="fill",
                 missing_fill_strategy="auto",
@@ -387,14 +387,14 @@ async def get_data_quality(
     if not dataset:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Dataset {dataset_id} not found"
+            detail=f"Jeu de données {dataset_id} introuvable"
         )
     
     # Check ownership
     if not current_user.is_admin and dataset.user_id != current_user.user_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You do not have access to this dataset"
+            detail="Vous n'avez pas accès à ce jeu de données"
         )
     
     # Load data
@@ -463,14 +463,14 @@ async def get_cleaning_history(
     if not dataset:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Dataset {dataset_id} not found"
+            detail=f"Jeu de données {dataset_id} introuvable"
         )
 
     # Check ownership
     if not current_user.is_admin and dataset.user_id != current_user.user_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You do not have access to this dataset"
+            detail="Vous n'avez pas accès à ce jeu de données"
         )
     
     logs = await CleaningLogRepository.get_by_dataset(db, dataset_id)
@@ -486,9 +486,9 @@ async def get_outliers_metadata(
     """Get outliers metadata from the latest cleaning run for this dataset."""
     dataset = await DatasetRepository.get_by_id(db, dataset_id)
     if not dataset:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Dataset {dataset_id} not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Jeu de données {dataset_id} introuvable")
     if not current_user.is_admin and dataset.user_id != current_user.user_id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have access to this dataset")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Vous n'avez pas accès à ce jeu de données")
 
     logs = await CleaningLogRepository.get_by_dataset(db, dataset_id)
     log = next(
@@ -501,7 +501,7 @@ async def get_outliers_metadata(
     if not log:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="No cleaning run with saved outliers metadata for this dataset",
+            detail="Aucune exécution de nettoyage avec métadonnées de valeurs aberrantes pour ce jeu de données",
         )
 
     outliers = (log.cleaning_report or {}).get("changes", {}).get("outliers", {})
@@ -509,7 +509,7 @@ async def get_outliers_metadata(
     if not metadata:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="No saved outliers metadata for this cleaning run"
+            detail="Aucune métadonnée de valeurs aberrantes sauvegardée pour cette exécution de nettoyage"
         )
 
     return {
@@ -533,14 +533,14 @@ async def apply_outliers_action(
     """Apply a user-approved outlier action (cap/remove) using latest metadata."""
     dataset = await DatasetRepository.get_by_id(db, dataset_id)
     if not dataset:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Dataset {dataset_id} not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Jeu de données {dataset_id} introuvable")
     if not current_user.is_admin and dataset.user_id != current_user.user_id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have access to this dataset")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Vous n'avez pas accès à ce jeu de données")
 
     if request.action == "flag":
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Use 'cap' or 'remove' for apply action")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Utilisez 'cap' ou 'remove' comme action à appliquer")
     if not request.force:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="force must be true to apply outlier action")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="force doit être true pour appliquer l'action sur les valeurs aberrantes")
 
     logs = await CleaningLogRepository.get_by_dataset(db, dataset_id)
     log = next(
@@ -553,13 +553,13 @@ async def apply_outliers_action(
     if not log:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="No cleaning run with saved outliers metadata for this dataset",
+            detail="Aucune exécution de nettoyage avec métadonnées de valeurs aberrantes pour ce jeu de données",
         )
 
     outliers = (log.cleaning_report or {}).get("changes", {}).get("outliers", {})
     metadata = outliers.get("metadata")
     if not metadata:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No saved outliers metadata for this cleaning run")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Aucune métadonnée de valeurs aberrantes sauvegardée pour cette exécution de nettoyage")
 
     df, _ = await ParserService.parse_file(dataset.file_path, dataset.file_type)
     rows_before = len(df)
@@ -585,8 +585,8 @@ async def apply_outliers_action(
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=(
-                    "selected_rows did not match any rows. "
-                    "You can pass dataframe index values, 1-based row numbers, or values from the 'id' column."
+                    "selected_rows ne correspond à aucune ligne. "
+                    "Vous pouvez passer des index de dataframe, des numéros de ligne (base 1), ou des valeurs de la colonne 'id'."
                 ),
             )
 
@@ -596,8 +596,8 @@ async def apply_outliers_action(
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=(
-                    "No valid target_columns provided. "
-                    f"Available columns with outlier metadata: {sorted([c for c in metadata.keys() if c in df.columns])}"
+                    "Aucune target_columns valide fournie. "
+                    f"Colonnes disponibles avec métadonnées de valeurs aberrantes : {sorted([c for c in metadata.keys() if c in df.columns])}"
                 ),
             )
     else:
@@ -729,10 +729,10 @@ async def scan_dataset(
     dataset = await DatasetRepository.get_by_id(db, dataset_id)
     if not dataset:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                            detail=f"Dataset {dataset_id} not found")
+                            detail=f"Jeu de données {dataset_id} introuvable")
     if not current_user.is_admin and dataset.user_id != current_user.user_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
-                            detail="You do not have access to this dataset")
+                            detail="Vous n'avez pas accès à ce jeu de données")
 
     # 1. Return cached scan if already computed AND not forced
     cached_scan = (dataset.summary_stats or {}).get("scan_result")
@@ -777,14 +777,14 @@ async def validate_dataset(
     if not dataset:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Dataset {dataset_id} not found"
+            detail=f"Jeu de données {dataset_id} introuvable"
         )
     
     # Check ownership
     if not current_user.is_admin and dataset.user_id != current_user.user_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You do not have access to this dataset"
+            detail="Vous n'avez pas accès à ce jeu de données"
         )
     
     # Load data

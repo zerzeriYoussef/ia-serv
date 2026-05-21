@@ -226,6 +226,20 @@ def _guardrail_chunks(dataset_id: int, source_version: str) -> tuple[List[str], 
 # Public API
 # ---------------------------------------------------------------------------
 
+def delete_dataset_index(dataset_id: int) -> None:
+    """Remove the Chroma collection for a dataset (best-effort, non-fatal)."""
+    try:
+        client = _get_chroma_client()
+        client.delete_collection(_collection_name(dataset_id))
+        logger.info("Deleted Chroma collection for dataset %s", dataset_id)
+    except Exception as exc:
+        logger.warning(
+            "Chroma collection delete for dataset %s (non-fatal): %s",
+            dataset_id,
+            exc,
+        )
+
+
 async def index_dataset(db: AsyncSession, dataset_id: int) -> int:
     """
     Build or refresh the Chroma collection for a dataset.

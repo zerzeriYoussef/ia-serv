@@ -412,8 +412,8 @@ class KPIExecutor:
         labels_x = [str(idx) for idx in ct.index]
         labels_y = [str(col) for col in ct.columns]
         matrix = [
-            [(float(ct.at[idx, col]) if pd.notnull(ct.at[idx, col]) else None) for col in ct.columns]
-            for idx in ct.index
+            [(float(ct.at[idx, col]) if pd.notnull(ct.at[idx, col]) else None) for idx in ct.index]
+            for col in ct.columns
         ]
         return {
             "chart_title": title,

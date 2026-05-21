@@ -61,7 +61,7 @@ async def statistical_relationships_analytics(
         if not dataset:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Dataset {dataset_id} not found",
+                detail=f"Jeu de données {dataset_id} introuvable",
             )
         df, _ = await ParserService.parse_file(dataset.file_path, dataset.file_type)
         label = dataset.original_filename or f"dataset_{dataset_id}"
@@ -123,7 +123,7 @@ async def analyze_dataset(
     if not dataset:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Dataset {dataset_id} not found"
+            detail=f"Jeu de données {dataset_id} introuvable"
         )
     
     # Check if recent analysis exists
@@ -223,7 +223,7 @@ async def get_analysis(
     if not analysis:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"No analysis found for dataset {dataset_id}. Run POST /datasets/{dataset_id}/analyze first."
+            detail=f"Aucune analyse trouvée pour le jeu de données {dataset_id}. Exécutez d'abord POST /datasets/{dataset_id}/analyze."
         )
     
     return {
@@ -267,7 +267,7 @@ async def get_relationships_simple(
     if not analysis:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"No analysis found. Run POST /datasets/{dataset_id}/analyze first."
+            detail=f"Aucune analyse trouvée. Exécutez d'abord POST /datasets/{dataset_id}/analyze."
         )
     
     # Simplify to just column pairs
@@ -293,7 +293,7 @@ async def get_column_categories(
     if not analysis:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"No analysis found. Run POST /datasets/{dataset_id}/analyze first."
+            detail=f"Aucune analyse trouvée. Exécutez d'abord POST /datasets/{dataset_id}/analyze."
         )
     
     return {
@@ -319,5 +319,5 @@ async def delete_analysis(
     if not deleted:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"No analysis found for dataset {dataset_id}"
+            detail=f"Aucune analyse trouvée pour le jeu de données {dataset_id}"
         )

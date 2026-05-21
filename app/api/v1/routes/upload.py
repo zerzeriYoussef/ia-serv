@@ -229,7 +229,7 @@ async def get_dataset(
     if not dataset:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Dataset {dataset_id} not found",
+            detail=f"Jeu de données {dataset_id} introuvable",
         )
 
     if not current_user.is_admin and dataset.user_id != current_user.user_id:
@@ -241,7 +241,7 @@ async def get_dataset(
         )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You do not have access to this dataset",
+            detail="Vous n'avez pas accès à ce jeu de données",
         )
 
     return dataset
@@ -263,14 +263,14 @@ async def preview_dataset(
     """
     dataset = await DatasetRepository.get_by_id(db, dataset_id)
     if not dataset:
-        raise HTTPException(status_code=404, detail=f"Dataset {dataset_id} not found")
+        raise HTTPException(status_code=404, detail=f"Jeu de données {dataset_id} introuvable")
 
     if not current_user.is_admin and dataset.user_id != current_user.user_id:
-        raise HTTPException(status_code=403, detail="Forbidden")
+        raise HTTPException(status_code=403, detail="Accès interdit")
 
     import os
     if not os.path.exists(dataset.file_path):
-        raise HTTPException(status_code=404, detail="Underlying file not found")
+        raise HTTPException(status_code=404, detail="Fichier source introuvable")
 
     df, _ = await ParserService.parse_file(dataset.file_path, dataset.file_type)
     
@@ -310,7 +310,7 @@ async def delete_dataset(
     if not dataset:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Dataset {dataset_id} not found",
+            detail=f"Jeu de données {dataset_id} introuvable",
         )
 
     if not current_user.is_admin and dataset.user_id != current_user.user_id:
@@ -322,9 +322,17 @@ async def delete_dataset(
         )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You do not have access to delete this dataset",
+            detail="Vous n'avez pas le droit de supprimer ce jeu de données",
         )
 
+    from app.services.rag.dataset_indexer import delete_dataset_index
+
     await ingestion_service.delete_file(dataset.file_path)
-    await DatasetRepository.delete(db, dataset_id)
+    deleted = await DatasetRepository.delete(db, dataset_id)
+    if not deleted:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Jeu de données {dataset_id} introuvable",
+        )
+    delete_dataset_index(dataset_id)
     logger.info(f"Dataset {dataset_id} deleted by user_id={current_user.user_id}")

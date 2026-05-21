@@ -199,6 +199,201 @@ def _get_llm(streaming: bool = False):
     )
 
 
+def _language_label(language: str) -> str:
+    normalized = (language or "fr").strip().lower()
+    if normalized.startswith("en"):
+        return "English"
+    if normalized.startswith("ar"):
+        return "Arabic"
+    if normalized.startswith("es"):
+        return "Spanish"
+    return "French"
+
+
+def _format_value(value: Any) -> str:
+    if value is None:
+        return "n/a"
+    if isinstance(value, float):
+        return f"{value:,.2f}".rstrip("0").rstrip(".")
+    if isinstance(value, int):
+        return f"{value:,}"
+    return str(value)
+
+
+def _fallback_what_happened(fact_pack: Dict[str, Any], language: str) -> WhatHappened:
+    dataset = fact_pack.get("dataset") or {}
+    quality = fact_pack.get("quality") or {}
+    metric_facts = fact_pack.get("metric_facts") or []
+    trend = fact_pack.get("trend") or {}
+    metric = metric_facts[0] if metric_facts else {}
+
+    if language == "English":
+        narrative = (
+            f"The dataset contains {quality.get('row_count', 0)} rows and "
+            f"{quality.get('column_count', 0)} columns. The main metric is "
+            f"{dataset.get('primary_metric') or 'not detected'}."
+        )
+        if metric:
+            maximum = metric.get("maximum") or {}
+            minimum = metric.get("minimum") or {}
+            narrative += (
+                f" {metric.get('metric')} totals {_format_value(metric.get('total'))}, "
+                f"averages {_format_value(metric.get('average'))}, peaks at "
+                f"{_format_value(maximum.get('value'))} in {maximum.get('where')}, "
+                f"and bottoms at {_format_value(minimum.get('value'))} in {minimum.get('where')}."
+            )
+        if trend:
+            narrative += (
+                f" Over time, {trend.get('metric')} moved from "
+                f"{_format_value(trend.get('first_value'))} in {trend.get('first_period')} "
+                f"to {_format_value(trend.get('last_value'))} in {trend.get('last_period')}, "
+                f"with a peak of {_format_value(trend.get('peak_value'))} in {trend.get('peak_period')}."
+            )
+    else:
+        narrative = (
+            f"Le dataset contient {quality.get('row_count', 0)} lignes et "
+            f"{quality.get('column_count', 0)} colonnes. La metrique principale est "
+            f"{dataset.get('primary_metric') or 'non detectee'}."
+        )
+        if metric:
+            maximum = metric.get("maximum") or {}
+            minimum = metric.get("minimum") or {}
+            narrative += (
+                f" {metric.get('metric')} totalise {_format_value(metric.get('total'))}, "
+                f"avec une moyenne de {_format_value(metric.get('average'))}, un maximum de "
+                f"{_format_value(maximum.get('value'))} a {maximum.get('where')} "
+                f"et un minimum de {_format_value(minimum.get('value'))} a {minimum.get('where')}."
+            )
+        if trend:
+            narrative += (
+                f" Dans le temps, {trend.get('metric')} passe de "
+                f"{_format_value(trend.get('first_value'))} en {trend.get('first_period')} "
+                f"a {_format_value(trend.get('last_value'))} en {trend.get('last_period')}, "
+                f"avec un pic de {_format_value(trend.get('peak_value'))} en {trend.get('peak_period')}."
+            )
+    return WhatHappened(narrative=narrative)
+
+
+def _fallback_why_it_happened(fact_pack: Dict[str, Any], language: str) -> WhyItHappened:
+    dim_facts = fact_pack.get("dimension_facts") or []
+    relationships = fact_pack.get("relationships") or []
+    parts: List[str] = []
+    sources: List[ReportSource] = []
+
+    if dim_facts:
+        dim = dim_facts[0]
+        top_metric = dim.get("top_values_by_metric_total") or []
+        top_count = dim.get("top_values_by_count") or []
+        if top_metric:
+            leader = top_metric[0]
+            if language == "English":
+                parts.append(
+                    f"The main visible driver is {dim.get('dimension')}: "
+                    f"{leader.get('value')} leads the metric total with "
+                    f"{_format_value(leader.get('metric_total'))}."
+                )
+            else:
+                parts.append(
+                    f"Le principal facteur visible est {dim.get('dimension')} : "
+                    f"{leader.get('value')} domine le total avec "
+                    f"{_format_value(leader.get('metric_total'))}."
+                )
+        elif top_count:
+            leader = top_count[0]
+            if language == "English":
+                parts.append(
+                    f"The dataset is concentrated around {leader.get('value')} "
+                    f"for {dim.get('dimension')} ({leader.get('count')} rows)."
+                )
+            else:
+                parts.append(
+                    f"Le dataset est concentre autour de {leader.get('value')} "
+                    f"pour {dim.get('dimension')} ({leader.get('count')} lignes)."
+                )
+        sources.append(ReportSource(type="internal", title=f"Dimension: {dim.get('dimension')}"))
+
+    if relationships:
+        rel = relationships[0]
+        cols = " <-> ".join(rel.get("columns") or [])
+        if cols:
+            if language == "English":
+                parts.append(
+                    f"The strongest detected relationship is {cols}, "
+                    f"with strength {_format_value(rel.get('strength'))}."
+                )
+            else:
+                parts.append(
+                    f"La relation la plus forte detectee est {cols}, "
+                    f"avec une force de {_format_value(rel.get('strength'))}."
+                )
+            sources.append(ReportSource(type="internal", title=f"Relationship: {cols}"))
+
+    if not parts:
+        parts.append(
+            "The current dataset is mainly descriptive; the strongest explanation comes from the ranked metric and quality facts."
+            if language == "English"
+            else "Le dataset est surtout descriptif ; l'explication la plus fiable vient des classements, tendances et controles qualite."
+        )
+        sources.append(ReportSource(type="internal", title="Computed fact pack"))
+
+    return WhyItHappened(narrative=" ".join(parts), sources=sources)
+
+
+def _fallback_recommendations(
+    fact_pack: Dict[str, Any],
+    language: str,
+) -> tuple[List[ActionableRecommendation], List[str]]:
+    dataset = fact_pack.get("dataset") or {}
+    metric = dataset.get("primary_metric") or "primary metric"
+    trend = fact_pack.get("trend") or {}
+    quality = fact_pack.get("quality") or {}
+
+    if language == "English":
+        recs = [
+            ActionableRecommendation(
+                priority=1,
+                action=f"Build the report headline around {metric} and its peak/low periods.",
+                expected_outcome="Readers immediately see the main movement instead of a generic summary.",
+            ),
+            ActionableRecommendation(
+                priority=2,
+                action="Add a ranked breakdown for the top dimension values by count and metric total.",
+                expected_outcome="The report shows which segments matter most and supports better dashboard filters.",
+            ),
+            ActionableRecommendation(
+                priority=3,
+                action=f"Track data quality before every report run: {quality.get('missing_cells', 0)} missing cells and {quality.get('duplicate_rows', 0)} duplicate rows were found here.",
+                expected_outcome="The user can trust the report and spot weak input data early.",
+            ),
+        ]
+        avoids = ["Avoid broad recommendations that do not name a metric, segment, or period."]
+    else:
+        recs = [
+            ActionableRecommendation(
+                priority=1,
+                action=f"Construire le message principal autour de {metric} et de ses periodes de pic/faible niveau.",
+                expected_outcome="Le lecteur voit tout de suite le mouvement important au lieu d'un resume generique.",
+            ),
+            ActionableRecommendation(
+                priority=2,
+                action="Ajouter un classement des principales dimensions par volume et par total de la metrique.",
+                expected_outcome="Le rapport montre quels segments comptent vraiment et aide a definir les filtres du dashboard.",
+            ),
+            ActionableRecommendation(
+                priority=3,
+                action=f"Controler la qualite avant chaque generation : {quality.get('missing_cells', 0)} cellules manquantes et {quality.get('duplicate_rows', 0)} doublons ici.",
+                expected_outcome="Le rapport devient plus fiable et les donnees faibles sont detectees plus tot.",
+            ),
+        ]
+        avoids = ["Eviter les recommandations larges qui ne citent ni metrique, ni segment, ni periode."]
+
+    if trend:
+        recs[0].action += (
+            f" Peak: {trend.get('peak_period')} ({_format_value(trend.get('peak_value'))})."
+        )
+    return recs, avoids
+
+
 async def _invoke_json_section(messages: List[Any], section_name: str) -> Any:
     """
     Call Gemini via LangChain (non-streaming) and parse the JSON response.
@@ -278,6 +473,7 @@ async def generate_report_stream(
     filters: Optional[Dict[str, Any]] = None,
     include_web_context: bool = True,
     conversation_id: Optional[int] = None,
+    language: str = "fr",
 ) -> AsyncGenerator[str, None]:
     """
     4-step pipeline. Yields raw SSE frame strings.
@@ -285,6 +481,7 @@ async def generate_report_stream(
     t0 = time.monotonic()
     report_id = str(uuid4())
     filters = filters or {}
+    language_name = _language_label(language)
 
     # ── STEP 1: Load internal context via LangChain RAG + Conversation Context ───────────────────
     yield _step(ReportStep.loading_context, "Loading dataset analysis and conversation context…")
@@ -303,6 +500,8 @@ async def generate_report_stream(
     primary_metric  = internal_ctx["primary_metric"] or "performance"
     metrics         = internal_ctx["metrics"]
     dimensions      = internal_ctx["dimensions"]
+    fact_pack       = internal_ctx.get("fact_pack") or {}
+    fact_pack_text  = internal_ctx.get("fact_pack_text") or "No computed facts available."
 
     # Fetch conversation context if available
     conversation_ctx_text = "No prior conversation."
@@ -350,13 +549,21 @@ async def generate_report_stream(
 
     # -- 3a: What Happened (streaming narrative) -----------------------
     wh_messages = build_what_happened_prompt(
-        internal_ctx  = chunks_by_topic.get("executive", ""),
+        internal_ctx  = (
+            chunks_by_topic.get("executive", "")
+            + "\n\nKPI_CONTEXT:\n"
+            + json.dumps(internal_ctx.get("kpi_block"), default=str)
+        ),
+        fact_pack = fact_pack_text,
         conversation_ctx = conversation_ctx_text,
         dataset_name  = dataset_name,
         primary_metric= primary_metric,
+        language=language_name,
     )
     wh_raw = await _invoke_json_section(wh_messages, "what_happened")
     what_happened = _parse_what_happened(wh_raw)
+    if not what_happened.narrative.strip():
+        what_happened = _fallback_what_happened(fact_pack, language_name)
     
     # Stream the narrative token-by-token from the paragraph
     wh_paragraph = what_happened.narrative or "No data available to explain what happened."
@@ -374,12 +581,22 @@ async def generate_report_stream(
 
     # -- 3b: Why It Happened (streaming narrative) --------------------------
     why_messages = build_why_it_happened_prompt(
-        internal_ctx   = chunks_by_topic.get("relationships", "") + "\\n" + chunks_by_topic.get("dimensions", ""),
+        internal_ctx   = (
+            chunks_by_topic.get("relationships", "")
+            + "\n\n"
+            + chunks_by_topic.get("dimensions", "")
+            + "\n\nGUARDRAILS:\n"
+            + chunks_by_topic.get("guardrails", "")
+        ),
+        fact_pack = fact_pack_text,
         conversation_ctx = conversation_ctx_text,
         external_ctx   = external_ctx_text,
+        language=language_name,
     )
     why_raw = await _invoke_json_section(why_messages, "why_it_happened")
     why_it_happened = _parse_why_it_happened(why_raw)
+    if not why_it_happened.narrative.strip():
+        why_it_happened = _fallback_why_it_happened(fact_pack, language_name)
     
     why_narrative = why_it_happened.narrative or "No data available to explain why."
     for word in why_narrative.split():
@@ -392,10 +609,14 @@ async def generate_report_stream(
     wtd_messages = build_what_to_do_prompt(
         what_happened = what_happened.narrative,
         why_it_happened = why_it_happened.narrative,
+        fact_pack = fact_pack_text,
         conversation_ctx = conversation_ctx_text,
+        language=language_name,
     )
     wtd_raw = await _invoke_json_section(wtd_messages, "what_to_do")
     what_to_do, what_to_avoid = _parse_what_to_do(wtd_raw)
+    if not what_to_do:
+        what_to_do, what_to_avoid = _fallback_recommendations(fact_pack, language_name)
     
     for rec in what_to_do:
         action_text = f"[{rec.priority}] {rec.action} → {rec.expected_outcome} "

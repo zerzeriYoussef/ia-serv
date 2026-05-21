@@ -48,7 +48,7 @@ def _require_gemini() -> None:
     if not settings.GEMINI_API_KEY:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="GEMINI_API_KEY is not configured",
+            detail="GEMINI_API_KEY n'est pas configuré",
         )
 
 
@@ -57,12 +57,12 @@ def _handle_rag_value_error(e: ValueError, dataset_id: int) -> None:
     if code == "no_analysis":
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"No analysis for dataset {dataset_id}. Run POST /datasets/{dataset_id}/analyze first.",
+            detail=f"Aucune analyse pour le jeu de données {dataset_id}. Exécutez d'abord POST /datasets/{dataset_id}/analyze.",
         )
     if code == "no_dataset":
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Dataset {dataset_id} not found.",
+            detail=f"Jeu de données {dataset_id} introuvable.",
         )
     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
@@ -72,7 +72,7 @@ def _raise_rag_upstream_error(e: Exception) -> None:
     if isinstance(e, httpx.HTTPStatusError):
         upstream_status = e.response.status_code
         if upstream_status == status.HTTP_429_TOO_MANY_REQUESTS:
-            detail = "Gemini quota exceeded or rate limited. Please retry later or use another API key/plan."
+            detail = "Quota Gemini dépassé ou limité en débit. Veuillez réessayer plus tard ou utiliser une autre clé API."
             try:
                 body = e.response.json()
                 detail = body.get("error", {}).get("message") or detail
@@ -86,12 +86,12 @@ def _raise_rag_upstream_error(e: Exception) -> None:
         if upstream_status == status.HTTP_503_SERVICE_UNAVAILABLE:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Gemini is temporarily unavailable or overloaded. Please retry shortly.",
+                detail="Gemini est temporairement indisponible ou surchargé. Veuillez réessayer sous peu.",
             ) from e
 
     raise HTTPException(
         status_code=status.HTTP_502_BAD_GATEWAY,
-        detail=f"RAG/Gemini failed: {e!s}",
+        detail=f"Échec RAG/Gemini : {e!s}",
     ) from e
 
 
@@ -162,7 +162,7 @@ async def dataset_rag_insights(
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,
-                detail=f"LLM returned invalid shape: {e!s}",
+                detail=f"Le LLM a retourné un format invalide : {e!s}",
             ) from e
 
     # ── save=false branch (original behaviour) ───────────────────────────
@@ -185,7 +185,7 @@ async def dataset_rag_insights(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"LLM returned invalid shape: {e!s}",
+            detail=f"Le LLM a retourné un format invalide : {e!s}",
         ) from e
 
     rag_meta = RagMetaSchema.model_validate(meta["rag"]) if debug else None
@@ -222,7 +222,7 @@ async def list_dashboards(
     if not dataset:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Dataset {dataset_id} not found.",
+            detail=f"Jeu de données {dataset_id} introuvable.",
         )
 
     dashboards = await DashboardRepository.get_by_dataset(db, dataset_id, skip=skip, limit=limit)
@@ -273,7 +273,7 @@ async def execute_dashboard(
     if not dashboard:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Dashboard {dashboard_id} not found.",
+            detail=f"Tableau de bord {dashboard_id} introuvable.",
         )
 
     # Load dataset
@@ -281,7 +281,7 @@ async def execute_dashboard(
     if not dataset:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Dataset {dashboard.dataset_id} not found.",
+            detail=f"Jeu de données {dashboard.dataset_id} introuvable.",
         )
 
     # Parse CSV/XLSX into DataFrame
@@ -290,7 +290,7 @@ async def execute_dashboard(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"Could not parse dataset file: {e!s}",
+            detail=f"Impossible d'analyser le fichier du jeu de données : {e!s}",
         ) from e
 
     # Execute KPIs (still returned in full)
@@ -342,14 +342,14 @@ async def get_chart_data(
     if not dashboard:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Dashboard {dashboard_id} not found.",
+            detail=f"Tableau de bord {dashboard_id} introuvable.",
         )
 
     charts = dashboard.dashboard_charts or []
     if chart_index < 0 or chart_index >= len(charts):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"chart_index {chart_index} not found. This dashboard has {len(charts)} charts (0..{len(charts) - 1}).",
+            detail=f"chart_index {chart_index} introuvable. Ce tableau de bord contient {len(charts)} graphiques (0..{len(charts) - 1}).",
         )
 
     # Load dataset + parse
@@ -357,7 +357,7 @@ async def get_chart_data(
     if not dataset:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Dataset {dashboard.dataset_id} not found.",
+            detail=f"Jeu de données {dashboard.dataset_id} introuvable.",
         )
 
     try:
@@ -365,7 +365,7 @@ async def get_chart_data(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"Could not parse dataset file: {e!s}",
+            detail=f"Impossible d'analyser le fichier du jeu de données : {e!s}",
         ) from e
 
     executor = KPIExecutor(df)
@@ -375,7 +375,7 @@ async def get_chart_data(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"Chart execution failed: {e!s}",
+            detail=f"Échec de l'exécution du graphique : {e!s}",
         ) from e
 
     return ChartDataResponseSchema(
