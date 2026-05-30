@@ -7,15 +7,28 @@ same deterministic FACT_PACK so the model writes from evidence instead of
 guessing from vague context.
 """
 
+
+
 from __future__ import annotations
+
+
 
 from typing import Any, List
 
+
+
 from langchain_core.prompts import (
+
     ChatPromptTemplate,
+
     HumanMessagePromptTemplate,
+
     SystemMessagePromptTemplate,
+
 )
+
+
+
 
 
 REPORT_SYSTEM_INSTRUCTION = """\
@@ -41,16 +54,29 @@ RULES:
 """
 
 
+
+
+
 def _make_template(human_template: str) -> ChatPromptTemplate:
+
     return ChatPromptTemplate.from_messages(
+
         [
+
             SystemMessagePromptTemplate.from_template(REPORT_SYSTEM_INSTRUCTION),
+
             HumanMessagePromptTemplate.from_template(human_template),
+
         ]
+
     )
 
 
+
+
+
 WHAT_HAPPENED_TEMPLATE = _make_template(
+
     """\
 REQUESTED_LANGUAGE:
 {language}
@@ -75,10 +101,15 @@ Generate the what_happened section as JSON:
 Do not write a generic introduction. Do not say "it would be worth exploring"
 when FACT_PACK already gives the answer.
 """
+
 )
 
 
+
+
+
 WHY_IT_HAPPENED_TEMPLATE = _make_template(
+
     """\
 REQUESTED_LANGUAGE:
 {language}
@@ -107,10 +138,15 @@ Generate the why_it_happened section as JSON:
 If EXTERNAL_CONTEXT is weak or irrelevant, ignore it and use only internal
 sources. If you use EXTERNAL_CONTEXT, include a matching web source.
 """
+
 )
 
 
+
+
+
 WHAT_TO_DO_TEMPLATE = _make_template(
+
     """\
 REQUESTED_LANGUAGE:
 {language}
@@ -143,54 +179,106 @@ Generate the what_to_do section as JSON:
 
 Return exactly 3 recommendations. Avoid generic advice.
 """
+
 )
 
 
+
+
+
 def build_what_happened_prompt(
+
     internal_ctx: str,
+
     fact_pack: str,
+
     conversation_ctx: str,
+
     dataset_name: str,
+
     primary_metric: str,
+
     language: str = "French",
+
 ) -> List[Any]:
+
     return WHAT_HAPPENED_TEMPLATE.format_messages(
+
         internal_context=internal_ctx,
+
         fact_pack=fact_pack,
+
         conversation_context=conversation_ctx,
+
         dataset_name=dataset_name,
+
         primary_metric=primary_metric,
+
         language=language,
+
     )
+
+
+
 
 
 def build_why_it_happened_prompt(
+
     internal_ctx: str,
+
     fact_pack: str,
+
     conversation_ctx: str,
+
     external_ctx: str,
+
     language: str = "French",
+
 ) -> List[Any]:
+
     return WHY_IT_HAPPENED_TEMPLATE.format_messages(
+
         internal_context=internal_ctx,
+
         fact_pack=fact_pack,
+
         conversation_context=conversation_ctx,
+
         external_context=external_ctx,
+
         language=language,
+
     )
+
+
+
 
 
 def build_what_to_do_prompt(
+
     what_happened: str,
+
     why_it_happened: str,
+
     fact_pack: str,
+
     conversation_ctx: str,
+
     language: str = "French",
+
 ) -> List[Any]:
+
     return WHAT_TO_DO_TEMPLATE.format_messages(
+
         what_happened=what_happened,
+
         why_it_happened=why_it_happened,
+
         fact_pack=fact_pack,
+
         conversation_context=conversation_ctx,
+
         language=language,
+
     )
+
