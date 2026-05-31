@@ -4,6 +4,7 @@ Report API routes.
 Routes:
   GET  /datasets/{dataset_id}/reports/stream  → SSE stream of report generation
   POST /datasets/{dataset_id}/reports         → non-streaming (testing / debug)
+  GET  /datasets/{dataset_id}/reports/{report_id}/followup/stream → SSE report Q&A
 """
 
 
@@ -47,6 +48,14 @@ from app.core.config import settings
 from app.core.database import get_db
 
 from app.repositories.dataset_repository import DatasetRepository
+
+from app.repositories.conversation_repository import ConversationRepository
+
+from app.models.conversation import MessageRole
+
+from app.services.chat.orchestrator import run_chat_turn
+
+from app.services.report.report_cache import format_report_context, get_cached_report
 
 from app.services.report.report_service import generate_report_stream
 
@@ -117,6 +126,46 @@ async def _get_owned_dataset_or_404(
         )
 
     return ds
+
+
+
+
+
+async def _get_conversation_or_404(
+
+    db: AsyncSession,
+
+    dataset_id: int,
+
+    conversation_id: int,
+
+    current_user: CurrentUser,
+
+):
+
+    conv = await ConversationRepository.get_by_id(db, conversation_id)
+
+    if not conv or conv.dataset_id != dataset_id:
+
+        raise HTTPException(
+
+            status_code=status.HTTP_404_NOT_FOUND,
+
+            detail=f"Conversation {conversation_id} introuvable pour le jeu de données {dataset_id}",
+
+        )
+
+    if not current_user.is_admin and conv.user_id != current_user.user_id:
+
+        raise HTTPException(
+
+            status_code=status.HTTP_403_FORBIDDEN,
+
+            detail="Vous n'avez pas acces a cette conversation.",
+
+        )
+
+    return conv
 
 
 
@@ -254,7 +303,7 @@ async def stream_report(
 
                 f"event: {ReportSseEventType.report_error.value}\n"
 
-                f"data: { \"error\": \"{exc!s}\"} \n\n"
+                f"data: {json.dumps({'error': str(exc)})}\n\n"
 
             )
 
@@ -380,4 +429,207 @@ async def generate_report(
 
 
     return final_report
+
+
+
+
+
+@router.get(
+
+    "/datasets/{dataset_id}/reports/{report_id}/followup/stream",
+
+    summary="Ask a follow-up question about a generated report (SSE)",
+
+    tags=["Reports"],
+
+    response_class=StreamingResponse,
+
+)
+
+async def stream_report_followup(
+
+    dataset_id: int,
+
+    report_id: str,
+
+    conversation_id: int = Query(..., description="Conversation for Q&A history"),
+
+    message: str = Query(..., min_length=1, max_length=4096, description="Follow-up question"),
+
+    active_section: Optional[str] = Query(
+
+        default=None,
+
+        description="Report section the user was viewing (what_happened, why, what_to_do, sources)",
+
+    ),
+
+    db: AsyncSession = Depends(get_db),
+
+    current_user: CurrentUser = Depends(require_auth),
+
+):
+
+    """
+    SSE streaming for contextual Q&A after report generation.
+
+    Reuses chat orchestrator events: intent, retrieval, tool_*, chart, token, done, error, message_persisted.
+    """
+
+    _require_gemini()
+
+    await _get_owned_dataset_or_404(db, dataset_id, current_user)
+
+    await _get_conversation_or_404(db, dataset_id, conversation_id, current_user)
+
+
+
+    cached = await get_cached_report(dataset_id, report_id)
+
+    if not cached:
+
+        raise HTTPException(
+
+            status_code=status.HTTP_404_NOT_FOUND,
+
+            detail="Rapport introuvable ou expiré. Regénérez le rapport.",
+
+        )
+
+
+
+    report_context = format_report_context(cached, active_section=active_section)
+
+
+
+    user_msg = await ConversationRepository.add_message(
+
+        db,
+
+        conversation_id=conversation_id,
+
+        role=MessageRole.user,
+
+        content=message,
+
+    )
+
+    await db.commit()
+
+
+
+    history_messages = await ConversationRepository.get_messages(
+
+        db, conversation_id, limit=settings.CHAT_MAX_RECENT_TURNS * 2
+
+    )
+
+    chronological_history = reversed([m for m in history_messages if m.id != user_msg.id])
+
+
+
+    async def event_stream():
+
+        collected_events = []
+
+        result_out: dict[str, Any] = {}
+
+        try:
+
+            async for frame in run_chat_turn(
+
+                db=db,
+
+                dataset_id=dataset_id,
+
+                conversation_id=conversation_id,
+
+                user_message=message,
+
+                history_messages=list(chronological_history),
+
+                report_context=report_context,
+
+                active_report_section=active_section,
+
+                result_out=result_out,
+
+            ):
+
+                collected_events.append(frame)
+
+                yield frame
+
+        except Exception as exc:
+
+            logger.error("stream_report_followup: SSE error: %s", exc)
+
+            yield f"event: error\ndata: {json.dumps({'error': str(exc)})}\n\n"
+
+            return
+
+
+
+        full_answer = result_out.get("full_answer", "")
+
+        try:
+
+            assistant_msg = await ConversationRepository.add_message(
+
+                db,
+
+                conversation_id=conversation_id,
+
+                role=MessageRole.assistant,
+
+                content=full_answer,
+
+                intent=result_out.get("intent"),
+
+                tool_calls=result_out.get("tool_calls"),
+
+                chunk_ids=result_out.get("chunk_ids"),
+
+                chart_spec=result_out.get("chart_spec"),
+
+                latency_ms=result_out.get("latency_ms"),
+
+            )
+
+            await db.commit()
+
+
+
+            if full_answer:
+
+                yield (
+
+                    f"event: message_persisted\n"
+
+                    f"data: {json.dumps({'message_id': assistant_msg.id})}\n\n"
+
+                )
+
+        except Exception as exc:
+
+            logger.error("stream_report_followup: persist failed: %s", exc)
+
+
+
+    return StreamingResponse(
+
+        event_stream(),
+
+        media_type="text/event-stream",
+
+        headers={
+
+            "Cache-Control": "no-cache",
+
+            "X-Accel-Buffering": "no",
+
+        },
+
+    )
+
 

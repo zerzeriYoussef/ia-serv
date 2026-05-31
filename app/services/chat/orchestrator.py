@@ -845,6 +845,10 @@ async def run_chat_turn(
 
     rolling_summary: Optional[str] = None,
 
+    report_context: Optional[str] = None,
+
+    active_report_section: Optional[str] = None,
+
 
 
     result_out: Optional[Dict[str, Any]] = None,
@@ -1008,10 +1012,22 @@ async def run_chat_turn(
 
 
 
+    report_block = ""
+    if report_context:
+        section_hint = ""
+        if active_report_section:
+            section_hint = f"\nACTIVE_REPORT_SECTION: {active_report_section}\n"
+        report_block = f"""
+REPORT_CONTEXT (user is asking a follow-up about this AI-generated report — prefer the report for narrative answers; use tool_calls for proof, numbers, or charts):
+{report_context}
+{section_hint}
+IMPORTANT: This is report Q&A. Answer in French. Do not ask for clarification when the question references a recommendation, section, source, or report item that exists in REPORT_CONTEXT.
+"""
+
     plan_user_prompt = f"""\
 DATASET_CONTEXT (use ONLY these column names in tool_calls):
 {json.dumps(analysis_ctx, default=str, indent=2)}
-
+{report_block}
 RETRIEVED_CONTEXT:
 {retrieval_ctx}
 
@@ -1227,6 +1243,8 @@ Produce a JSON plan with keys: intent, tool_calls, needs_chart, clarification_qu
     if plan.intent == Intent.clarify:
 
         msg = plan.clarification_question or "Could you clarify your question?"
+        if report_context and msg.strip().lower().startswith("could you clarify"):
+            msg = "Pouvez-vous préciser votre question ?"
 
         result_out.update({"full_answer": msg, "intent": plan.intent.value, "chunk_ids": chunk_ids,
 
@@ -1424,12 +1442,26 @@ Produce a JSON plan with keys: intent, tool_calls, needs_chart, clarification_qu
 
 
 
+    report_narrator_block = ""
+    if report_context:
+        cite_hint = (
+            "When relevant, cite report sections in French (e.g. "
+            "\"Voir section Quoi faire · Reco #2\", \"Voir section Pourquoi\"). "
+            "Answer in French using the report first; use TOOL_RESULTS for proof or when the user asks for numbers/charts."
+        )
+        report_narrator_block = f"""
+GENERATED REPORT (primary narrative source):
+{report_context}
+
+{cite_hint}
+"""
+
     narrator_prompt = f"""\
 DATASET INFO:
 - File: {dataset.original_filename}
 - Rows: {dataset.row_count}
 - Primary metric: {analysis_row.primary_metric}
-
+{report_narrator_block}
 RETRIEVED_CONTEXT:
 {retrieval_ctx}
 
@@ -1440,6 +1472,7 @@ TOOL_RESULTS:
 USER_QUESTION: {user_message}
 
 Answer directly and specifically. If the tool results contain the answer, give the exact number/values.
+If GENERATED REPORT is present, answer in French.
 """
 
 

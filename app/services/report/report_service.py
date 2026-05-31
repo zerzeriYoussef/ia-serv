@@ -100,6 +100,8 @@ from app.services.report.serper_agent import (
 
 from app.repositories.conversation_repository import ConversationRepository
 
+from app.services.report.report_cache import cache_report
+
 
 
 logger = logging.getLogger(__name__)
@@ -1278,6 +1280,8 @@ async def generate_report_stream(
     )
 
 
+
+    await cache_report(dataset_id, report)
 
     yield _sse(
 
